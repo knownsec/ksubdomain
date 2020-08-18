@@ -6,7 +6,9 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"log"
+	"math/rand"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -14,6 +16,8 @@ type SendDog struct {
 	ether  EthTable
 	dns    []string
 	handle *pcap.Handle
+	index  uint32
+	lock   *sync.RWMutex
 }
 
 func (d *SendDog) Init(ether EthTable, dns []string) {
@@ -29,13 +33,41 @@ func (d *SendDog) Init(ether EthTable, dns []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	d.index = 0
+	d.lock = &sync.RWMutex{}
 	//defer d.handle.Close()
 }
-func (d *SendDog) ChoseDns() string {
-	return d.dns[0]
+func (d *SendDog) Lock() {
+	d.lock.Lock()
 }
-func (d *SendDog) Send(domain string) {
-	DstIp := net.ParseIP(d.ChoseDns()).To4()
+func (d *SendDog) UnLock() {
+	d.lock.Unlock()
+}
+func (d *SendDog) ChoseDns() string {
+	return d.dns[rand.Intn(len(d.dns)-1)]
+}
+func (d *SendDog) BuildStatusTable(domain string, dns string) (uint16, uint16) {
+	// 生成本地状态表，返回ID和SrcPort参数
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	d.index++
+	for {
+		if _, ok := LocalStauts.Load(d.index); !ok {
+			LocalStauts.Store(d.index, StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0})
+			break
+		}
+		d.index++
+	}
+	// 1~60000
+	if d.index <= 60000 {
+		return 0 + 40400, uint16(d.index)
+	} else {
+		return uint16(d.index/60000 + 40400), uint16(d.index % 10000)
+	}
+
+}
+func (d *SendDog) Send(domain string, dnsname string, dnsid uint16, srcport uint16) {
+	DstIp := net.ParseIP(dnsname).To4()
 	eth := &layers.Ethernet{
 		SrcMAC:       d.ether.SrcMac,
 		DstMAC:       d.ether.DstMac,
@@ -49,8 +81,8 @@ func (d *SendDog) Send(domain string) {
 		Length:     0, // FIX
 		Id:         0,
 		Flags:      layers.IPv4DontFragment,
-		FragOffset: 0,   //16384,
-		TTL:        128, //64,
+		FragOffset: 0,
+		TTL:        255,
 		Protocol:   layers.IPProtocolUDP,
 		Checksum:   0,
 		SrcIP:      d.ether.SrcIp,
@@ -58,12 +90,13 @@ func (d *SendDog) Send(domain string) {
 	}
 	// Our UDP header
 	udp := &layers.UDP{
-		SrcPort: layers.UDPPort(RandInt64(10000, 50000)),
+		//SrcPort: layers.UDPPort(RandInt64(10000, 50000)),
+		SrcPort: layers.UDPPort(srcport),
 		DstPort: layers.UDPPort(53),
 	}
 	// Our DNS header
 	dns := &layers.DNS{
-		ID:      111,
+		ID:      dnsid,
 		QDCount: 1,
 		RD:      false, //递归查询标识
 	}

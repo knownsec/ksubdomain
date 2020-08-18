@@ -37,18 +37,28 @@ func Recv(device string) {
 			if !dns.QR {
 				continue
 			}
-			if dns.ID == 111 {
+			flag := strconv.Itoa(int(dns.ID))[0:3]
+			if flag == "404" {
 				index += 1
-				fmt.Print("\r recv:" + strconv.Itoa(index))
+				fmt.Print("\rrecv:" + strconv.Itoa(index))
 			}
-			if dns.ID == 111 && dns.ANCount > 0 {
+			if flag == "404" && dns.ANCount > 0 {
 				msg := ""
 				for _, v := range dns.Questions {
 					msg += string(v.Name) + " => "
 				}
 				for _, v := range dns.Answers {
-					msg += v.String() + " ttl:" + strconv.Itoa(int(v.TTL))
+					msg += v.String() + " ttl:" + strconv.Itoa(int(v.TTL)) + " "
 				}
+				//flagID := dns.ID - 40400
+				upd, _ := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
+				//fmt.Println("srcport", uint32(upd.DstPort))
+				if _, ok := LocalStauts.Load(uint32(upd.DstPort)); ok {
+					//success_dns := v.(StatusTable).Dns
+					//fmt.Println(success_dns)
+					LocalStauts.Delete(uint32(upd.DstPort))
+				}
+
 				fmt.Print("\r", msg, "\n")
 			}
 		}

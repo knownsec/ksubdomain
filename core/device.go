@@ -37,12 +37,12 @@ func GetDevices() EthTable {
 		for _, addr := range addrs {
 			if ip, ok := addr.(*net.IPNet); ok && !ip.IP.IsLoopback() {
 				if ip.IP.To4() != nil {
-					fmt.Println("Name:",interfaceName)
+					fmt.Println("Name:", interfaceName)
 					fmt.Println("IP:", ip.IP)
 					fmt.Println("Mask:", ip.Mask)
 					fmt.Println("Mac:", inter.HardwareAddr.String())
 					c := GetGateMacAddress(interfaceName)
-					fmt.Println("GateWay Mac:",c)
+					fmt.Println("GateWay Mac:", c)
 					return EthTable{ip.IP, interfaceName, inter.HardwareAddr, c}
 				}
 			}
@@ -51,7 +51,7 @@ func GetDevices() EthTable {
 	panic("获取不到可用的IP或网关搜索失败")
 }
 
-func GetGateMacAddress(dvice string) net.HardwareAddr{
+func GetGateMacAddress(dvice string) net.HardwareAddr {
 	// 获取网关mac地址
 	domain := RandomStr(4) + "paper.seebug.org"
 	_signal := make(chan net.HardwareAddr)
@@ -73,7 +73,7 @@ func GetGateMacAddress(dvice string) net.HardwareAddr{
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 		for {
 			packet, err := packetSource.NextPacket()
-			fmt.Print("1111")
+			fmt.Print(".")
 			if err != nil {
 				continue
 			}
@@ -106,6 +106,6 @@ func GetGateMacAddress(dvice string) net.HardwareAddr{
 			time.Sleep(time.Millisecond * 10)
 		}
 	}
-	END:
-		return c
+END:
+	return c
 }
