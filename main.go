@@ -5,8 +5,8 @@ import (
 )
 
 func main() {
-	bandwith := "1M" // K M G
-	domain := ".baidu.com"
-	filename := "/Users/boyhack/goproject/subdomain_brust/sub2.txt"
+	bandwith := "2M" // K M G
+	domain := ".qq.com"
+	filename := "/Users/boyhack/study/子域名收集/源码资料/ESD-master/ESD/subs.esd"
 	core.Start(domain, filename, bandwith)
 }

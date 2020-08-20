@@ -44,10 +44,10 @@ func Start(domain string, filename string, bandwith string) {
 	LocalStack = NewStack()
 	go Recv(ether.Device)
 	fmt.Println("启动接收模块,设置rate:", rate, "pps")
-	dns := []string{"223.5.5.5", "223.6.6.6", "180.76.76.76", "119.29.29.29", "182.254.116.116", "114.114.114.114"}
-	fmt.Println("Default DNS", dns)
+	defaultDns := []string{"223.5.5.5", "223.6.6.6", "180.76.76.76", "119.29.29.29", "182.254.116.116", "114.114.114.114"}
+	fmt.Println("Default DNS", defaultDns)
 	sendog := SendDog{}
-	sendog.Init(ether, dns)
+	sendog.Init(ether, defaultDns)
 	defer sendog.Close()
 	f, _ := os.Open(filename)
 	defer f.Close()
@@ -63,7 +63,7 @@ func Start(domain string, filename string, bandwith string) {
 			LocalStauts.Range(func(k, v interface{}) bool {
 				index := k.(uint32)
 				value := v.(StatusTable)
-				if value.Retry >= 10 {
+				if value.Retry >= 30 {
 					//fmt.Println("失败", value)
 					LocalStauts.Delete(index)
 					return true
