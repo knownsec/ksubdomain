@@ -13,11 +13,12 @@ import (
 )
 
 type SendDog struct {
-	ether  EthTable
-	dns    []string
-	handle *pcap.Handle
-	index  uint32
-	lock   *sync.RWMutex
+	ether          EthTable
+	dns            []string
+	handle         *pcap.Handle
+	index          uint32
+	lock           *sync.RWMutex
+	increate_index bool // 是否使用index自增
 }
 
 func (d *SendDog) Init(ether EthTable, dns []string) {
@@ -33,7 +34,8 @@ func (d *SendDog) Init(ether EthTable, dns []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	d.index = 0
+	d.index = 10000
+	d.increate_index = true
 	d.lock = &sync.RWMutex{}
 	//defer d.handle.Close()
 }
@@ -44,13 +46,42 @@ func (d *SendDog) UnLock() {
 	d.lock.Unlock()
 }
 func (d *SendDog) ChoseDns() string {
-	return d.dns[rand.Intn(len(d.dns)-1)]
+	if RecvIndex <= 1200 {
+		return d.dns[rand.Intn(len(d.dns)-1)]
+	} else {
+		max := 0
+		dnsname := ""
+		DnsChoice.Range(func(k, v interface{}) bool {
+			vv := v.(int)
+			if vv > max {
+				max = vv
+				dnsname = k.(string)
+			}
+			return true
+		})
+		return dnsname
+	}
 }
-func (d *SendDog) BuildStatusTable(domain string, dns string) (uint16, uint16) {
+func (d *SendDog) BuildStatusTable(domain string, dns string) uint16 {
 	// 生成本地状态表，返回ID和SrcPort参数
 	d.lock.Lock()
 	defer d.lock.Unlock()
-	d.index++
+	if d.index >= 60000 {
+		d.increate_index = false
+	}
+	if d.increate_index {
+		d.index++
+	} else {
+		for {
+			v, error := LocalStack.Pop()
+			if error == nil {
+				d.index = v
+				break
+			} else {
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+	}
 	for {
 		if _, ok := LocalStauts.Load(d.index); !ok {
 			LocalStauts.Store(d.index, StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0})
@@ -58,15 +89,10 @@ func (d *SendDog) BuildStatusTable(domain string, dns string) (uint16, uint16) {
 		}
 		d.index++
 	}
-	// 1~60000
-	if d.index <= 60000 {
-		return 0 + 40400, uint16(d.index)
-	} else {
-		return uint16(d.index/60000 + 40400), uint16(d.index % 10000)
-	}
-
+	return uint16(d.index)
 }
-func (d *SendDog) Send(domain string, dnsname string, dnsid uint16, srcport uint16) {
+
+func (d *SendDog) Send(domain string, dnsname string, srcport uint16) {
 	DstIp := net.ParseIP(dnsname).To4()
 	eth := &layers.Ethernet{
 		SrcMAC:       d.ether.SrcMac,
@@ -96,7 +122,7 @@ func (d *SendDog) Send(domain string, dnsname string, dnsid uint16, srcport uint
 	}
 	// Our DNS header
 	dns := &layers.DNS{
-		ID:      dnsid,
+		ID:      404,
 		QDCount: 1,
 		RD:      false, //递归查询标识
 	}
@@ -124,6 +150,7 @@ func (d *SendDog) Send(domain string, dnsname string, dnsid uint16, srcport uint
 	if err != nil {
 		fmt.Println(err)
 	}
+
 }
 func (d *SendDog) Close() {
 	d.handle.Close()

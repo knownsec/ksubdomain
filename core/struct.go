@@ -20,6 +20,8 @@ type EthTable struct {
 
 var wait_chain *Stack
 var LocalStauts sync.Map
+var DnsChoice sync.Map
+var RecvIndex uint64 = 0
 
 func GetWaitChain() *Stack {
 	if wait_chain == nil {

@@ -17,6 +17,8 @@ type (
 	}
 )
 
+var LocalStack *Stack
+
 // Create a new stack
 func NewStack() *Stack {
 	return &Stack{nil, 0, &sync.RWMutex{}}
