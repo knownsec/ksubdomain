@@ -1,7 +1,9 @@
 package core
 
 import (
+	"bufio"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -19,4 +21,21 @@ func RandInt64(min, max int64) int64 {
 		return max
 	}
 	return rand.Int63n(max-min) + min
+}
+
+func LinesInFile(fileName string) ([]string, error) {
+	result := []string{}
+	f, err := os.Open(fileName)
+	if err != nil {
+		return result, err
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line != "" {
+			result = append(result, line)
+		}
+	}
+	return result, nil
 }

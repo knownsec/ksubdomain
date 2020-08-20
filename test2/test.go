@@ -1,14 +1,22 @@
 package main
 
 import (
-	"fmt"
-	"time"
+	"bufio"
+	"log"
+	"os"
 )
 
 func main() {
-	now := time.Now().Unix()
-	fmt.Println(now)
-	time.Sleep(5 * time.Second)
-	fmt.Println(time.Now().Unix() - now)
-	//fmt.Println(string("aaaa"[1]))
+	output := "/Users/boyhack/GolandProjects/ksubdomain/test.txt"
+	foutput, err := os.OpenFile(output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+	if err != nil {
+		log.Panicln(err)
+	}
+	defer foutput.Close()
+	w := bufio.NewWriter(foutput)
+	defer w.Flush()
+	msg := "aaaaaaaaaa\n"
+	_, _ = w.WriteString(msg)
+
+	_, _ = w.WriteString("bbbbbbbbbb\n")
 }

@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-func Start(domain string, filename string, bandwith string) {
+func Start(domain string, filename string, bandwith string, reslovers []string, output string) {
 	ShowBanner()
-	if string(domain[0]) != "." {
+	if filename != "" && string(domain[0]) != "." {
 		domain = "." + domain
 	}
 	var rate int64
@@ -42,14 +42,23 @@ func Start(domain string, filename string, bandwith string) {
 	fmt.Println(version)
 	ether := GetDevices()
 	LocalStack = NewStack()
-	go Recv(ether.Device)
+	go Recv(ether.Device, output)
 	fmt.Println("启动接收模块,设置rate:", rate, "pps")
 	defaultDns := []string{"223.5.5.5", "223.6.6.6", "180.76.76.76", "119.29.29.29", "182.254.116.116", "114.114.114.114"}
+	if len(reslovers) > 0 {
+		defaultDns = reslovers
+	}
 	fmt.Println("Default DNS", defaultDns)
 	sendog := SendDog{}
 	sendog.Init(ether, defaultDns)
 	defer sendog.Close()
-	f, _ := os.Open(filename)
+	var f *os.File
+	if filename != "" {
+		f, _ = os.Open(filename)
+	} else {
+		f = os.Stdin
+	}
+
 	defer f.Close()
 	r := bufio.NewReader(f)
 
@@ -93,7 +102,12 @@ func Start(domain string, filename string, bandwith string) {
 		if msg == "" {
 			break
 		}
-		_domain := msg + domain
+		var _domain string
+		if filename != "" {
+			_domain = msg + domain
+		} else {
+			_domain = msg
+		}
 		dnsname := sendog.ChoseDns()
 		scrport := sendog.BuildStatusTable(_domain, dnsname)
 		sendog.Send(_domain, dnsname, scrport)

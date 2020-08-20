@@ -1,17 +1,19 @@
 package core
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"log"
+	"os"
 	"strconv"
 	"sync/atomic"
 	"time"
 )
 
-func Recv(device string) {
+func Recv(device string, output string) {
 	var (
 		snapshot_len int32         = 1024
 		promiscuous  bool          = false
@@ -35,6 +37,17 @@ func Recv(device string) {
 
 	parser := gopacket.NewDecodingLayerParser(
 		layers.LayerTypeEthernet, &eth, &ipv4, &udp, &dns)
+	var isWrite bool = false
+	if output != "" {
+		isWrite = true
+	}
+	var foutput *os.File
+	if isWrite {
+		foutput, err = os.OpenFile(output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+		if err != nil {
+			log.Panicln(err)
+		}
+	}
 	for {
 		packet, err := packetSource.NextPacket()
 		if err != nil {
@@ -73,6 +86,14 @@ func Recv(device string) {
 				}
 				success++
 				fmt.Println("\r" + msg)
+				if isWrite {
+					w := bufio.NewWriter(foutput)
+					_, err = w.WriteString(msg + "\n")
+					if err != nil {
+						fmt.Println(err)
+					}
+					w.Flush()
+				}
 			}
 			fmt.Printf("\rSuccess:%d Recv:%d ", success, RecvIndex)
 		}
