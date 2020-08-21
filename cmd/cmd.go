@@ -66,5 +66,5 @@ func main() {
 		}
 		resolvers = rs
 	}
-	core.Start(domain, filename, bandwith, resolvers, *flag_output)
+	core.Start(domain, filename, bandwith, resolvers, *flag_output, *flag_default)
 }
