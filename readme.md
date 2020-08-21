@@ -37,5 +37,13 @@ Usage of ./ksubdom_mac:
 ``` 
 echo "www.seebug.org"|ksubdomain
 ```
+## 编译
+因为pcap包的特殊性，无法交叉编译，只能每个系统编译每个文件。
+```bash
+git clone https://github.com/knownsec/ksubdomain
+cd ksubdomain
+go mod download
+go build cmd/cmd.go
+```
 ## 参考
 - 从 Masscan, Zmap 源码分析到开发实践 <https://paper.seebug.org/1052/>
