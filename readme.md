@@ -6,8 +6,10 @@ ksubdomain的发送和接收是分离且不依赖系统，即使高并发发包�
 ## 不会漏报
 类似masscan,这么大的发包速度意味着丢包也会非常严重，ksubdomain有丢包重发机制(这样意味着速度会减小，但比普通的DNS爆破快很多)，会保证每个包都收到DNS服务器的回复，漏报的可能性很小。
 
-## 安装
-在linux下，可能需要安装`libpcap-dev`,在Windows下需要安装`WinPcap`，mac下可以直接使用。
+## 使用
+从[releases](https://github.com/knownsec/ksubdomain/releases "releases")二进制文件。 
+
+在linux下，还需要安装`libpcap-dev`,在Windows下需要安装`WinPcap`，mac下可以直接使用。
 ```
 
  _  __   _____       _         _                       _
