@@ -45,7 +45,8 @@ echo "www.seebug.org"|ksubdomain
 git clone https://github.com/knownsec/ksubdomain
 cd ksubdomain
 go mod download
-go build cmd/cmd.go
+cd cmd
+go build .
 ```
 ## 参考
 - 从 Masscan, Zmap 源码分析到开发实践 <https://paper.seebug.org/1052/>
