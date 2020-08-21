@@ -12,7 +12,6 @@ import (
 )
 
 func Start(domain string, filename string, bandwith string, reslovers []string, output string) {
-	ShowBanner()
 	if filename != "" && string(domain[0]) != "." {
 		domain = "." + domain
 	}
@@ -40,7 +39,7 @@ func Start(domain string, filename string, bandwith string, reslovers []string, 
 
 	version := pcap.Version()
 	fmt.Println(version)
-	ether := GetDevices()
+	ether := GetDevices(-1)
 	LocalStack = NewStack()
 	go Recv(ether.Device, output)
 	fmt.Println("启动接收模块,设置rate:", rate, "pps")

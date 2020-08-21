@@ -16,15 +16,17 @@ var flag_filename = flag.String("f", "", "爆破字典路径")
 var flag_resolvers = flag.String("s", "", "resolvers文件路径")
 var flag_output = flag.String("o", "", "输出文件路径")
 var flag_test = flag.Bool("test", false, "测试本地最大发包数")
+var flag_default = flag.Int("e", -1, "默认网络设备ID,默认-1，如果有多个网络设备会在命令行中选择")
 
 func main() {
 	flag.Parse()
+	core.ShowBanner()
 	bandwith := *flag_bandwith // K M G
 	domain := *flag_domain
 	filename := *flag_filename
 	if *flag_test {
 		sendog := core.SendDog{}
-		ether := core.GetDevices()
+		ether := core.GetDevices(*flag_default)
 		ether.DstMac = net.HardwareAddr{0x5c, 0xc9, 0x09, 0x33, 0x34, 0x80}
 		sendog.Init(ether, []string{"8.8.8.8"})
 		defer sendog.Close()
