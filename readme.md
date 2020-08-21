@@ -39,6 +39,8 @@ Usage of ./ksubdom_mac:
 ``` 
 echo "www.seebug.org"|ksubdomain
 ```
+
+[![asciicast](https://asciinema.org/a/SxBhaYDqj4ZH2zVBecnPusMpE.svg)](https://asciinema.org/a/SxBhaYDqj4ZH2zVBecnPusMpE)
 ## 编译
 因为pcap包的特殊性，无法交叉编译，只能每个系统编译每个文件。
 ```bash
