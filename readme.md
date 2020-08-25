@@ -48,7 +48,7 @@ git clone https://github.com/knownsec/ksubdomain
 cd ksubdomain
 go mod download
 cd cmd
-go build .
+go build ksubdomain.go
 ```
 ## 参考
 - 从 Masscan, Zmap 源码分析到开发实践 <https://paper.seebug.org/1052/>

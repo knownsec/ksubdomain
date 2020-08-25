@@ -9,11 +9,12 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
 
-func Recv(device string, output string) {
+func Recv(device string, options *Options) {
 	var (
 		snapshot_len int32         = 1024
 		promiscuous  bool          = false
@@ -38,12 +39,13 @@ func Recv(device string, output string) {
 	parser := gopacket.NewDecodingLayerParser(
 		layers.LayerTypeEthernet, &eth, &ipv4, &udp, &dns)
 	var isWrite bool = false
-	if output != "" {
+	var isttl bool = options.TTL
+	if options.Output != "" {
 		isWrite = true
 	}
 	var foutput *os.File
 	if isWrite {
-		foutput, err = os.OpenFile(output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+		foutput, err = os.OpenFile(options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
 		if err != nil {
 			log.Panicln(err)
 		}
@@ -82,8 +84,13 @@ func Recv(device string, output string) {
 					msg += string(v.Name) + " => "
 				}
 				for _, v := range dns.Answers {
-					msg += v.String() + " ttl:" + strconv.Itoa(int(v.TTL)) + " "
+					msg += v.String()
+					if isttl {
+						msg += " ttl:" + strconv.Itoa(int(v.TTL))
+					}
+					msg += " => "
 				}
+				msg = strings.Trim(msg, " => ")
 				success++
 				fmt.Println("\r" + msg)
 				if isWrite {
