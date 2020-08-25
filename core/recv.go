@@ -40,6 +40,7 @@ func Recv(device string, options *Options) {
 		layers.LayerTypeEthernet, &eth, &ipv4, &udp, &dns)
 	var isWrite bool = false
 	var isttl bool = options.TTL
+	var issilent bool = options.Silent
 	if options.Output != "" {
 		isWrite = true
 	}
@@ -92,7 +93,9 @@ func Recv(device string, options *Options) {
 				}
 				msg = strings.Trim(msg, " => ")
 				success++
-				fmt.Println("\r" + msg)
+				if !issilent {
+					fmt.Println("\r" + msg)
+				}
 				if isWrite {
 					w := bufio.NewWriter(foutput)
 					_, err = w.WriteString(msg + "\n")
