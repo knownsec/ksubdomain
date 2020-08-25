@@ -52,6 +52,7 @@ func Start(options *Options) {
 	limiter := ratelimit.NewLimiter(ratelimit.Every(time.Duration(time.Second.Nanoseconds()/options.Rate)), 1000000)
 	ctx := context.Background()
 	// 协程重发线程
+	stop := make(chan string)
 	go func() {
 		for {
 			// 循环检测超时的队列
@@ -72,9 +73,17 @@ func Start(options *Options) {
 					srcport := uint16(index)
 					sendog.Send(value.Domain, value.Dns, srcport)
 				}
-				time.Sleep(time.Millisecond * time.Duration(rand.Intn(300)+100))
+				time.Sleep(time.Microsecond * time.Duration(rand.Intn(300)+100))
 				return true
 			})
+			var isbreak bool = true
+			LocalStauts.Range(func(k, v interface{}) bool {
+				isbreak = false
+				return false
+			})
+			if isbreak {
+				stop <- "i love u,lxk"
+			}
 		}
 	}()
 	for {
@@ -85,7 +94,7 @@ func Start(options *Options) {
 		}
 		msg := string(line)
 		if msg == "" {
-			break
+			continue
 		}
 		var _domain string
 		if options.Verify || options.Stdin {
@@ -97,18 +106,7 @@ func Start(options *Options) {
 		scrport := sendog.BuildStatusTable(_domain, dnsname)
 		sendog.Send(_domain, dnsname, scrport)
 	}
-
-	for {
-		var isbreak bool = true
-		LocalStauts.Range(func(k, v interface{}) bool {
-			isbreak = false
-			return false
-		})
-		if isbreak {
-			break
-		}
-		time.Sleep(700 * time.Millisecond)
-	}
+	<-stop
 	fmt.Println("检测完毕,等待最后5s")
 	time.Sleep(time.Second * 5)
 }
