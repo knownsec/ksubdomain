@@ -25,6 +25,7 @@ type Options struct {
 
 // ParseOptions parses the command line flags provided by a user
 func ParseOptions() *Options {
+	ShowBanner()
 	options := &Options{}
 	bandwith := flag.String("b", "1M", "宽带的下行速度，可以5M,5K,5G")
 	flag.StringVar(&options.Domain, "d", "", "爆破域名")
@@ -38,7 +39,6 @@ func ParseOptions() *Options {
 	flag.BoolVar(&options.Verify, "verify", false, "验证模式")
 	flag.Parse()
 	options.Stdin = hasStdin()
-	ShowBanner()
 	// handle resolver
 	if *resolvers != "" {
 		rs, err := LinesInFile(*resolvers)
