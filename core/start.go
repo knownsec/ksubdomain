@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -21,11 +22,10 @@ func Start(options *Options) {
 	fmt.Println("启动接收模块,设置rate:", options.Rate, "pps")
 	fmt.Println("DNS:", options.Resolvers)
 	// 设定接收的ID
-	flagID := uint16(RandInt64(400, 700))
+	flagID := uint16(RandInt64(400, 654))
 	go Recv(ether.Device, options, flagID)
 	sendog := SendDog{}
 	sendog.Init(ether, options.Resolvers, flagID)
-	defer sendog.Close()
 
 	var f io.Reader
 	if options.Stdin {
@@ -63,7 +63,8 @@ func Start(options *Options) {
 			LocalStauts.Range(func(k, v interface{}) bool {
 				index := k.(uint32)
 				value := v.(StatusTable)
-				if value.Retry >= 30 {
+				if value.Retry >= 25 {
+					atomic.AddUint64(&FaildIndex, 1)
 					LocalStauts.Delete(index)
 					return true
 				}
@@ -73,19 +74,23 @@ func Start(options *Options) {
 					value.Time = time.Now().Unix()
 					value.Dns = sendog.ChoseDns()
 					LocalStauts.Store(index, value)
-					srcport := uint16(index)
-					sendog.Send(value.Domain, value.Dns, srcport)
+					flag2, srcport := GenerateFlagIndexFromMap(index)
+					sendog.Send(value.Domain, value.Dns, srcport, flag2)
 				}
 				time.Sleep(time.Microsecond * time.Duration(rand.Intn(300)+100))
 				return true
 			})
-			var isbreak bool = true
-			LocalStauts.Range(func(k, v interface{}) bool {
-				isbreak = false
-				return false
-			})
-			if isbreak {
-				stop <- "i love u,lxk"
+		}
+	}()
+	go func() {
+		t := time.NewTicker(time.Millisecond * 300)
+		defer t.Stop()
+		for {
+			select {
+			case <-t.C:
+				fmt.Printf("\rSuccess:%d Sent:%d Recved:%d Faild:%d", SuccessIndex, SentIndex, RecvIndex, FaildIndex)
+			case <-stop:
+				return
 			}
 		}
 	}()
@@ -106,13 +111,25 @@ func Start(options *Options) {
 			_domain = msg + "." + options.Domain
 		}
 		dnsname := sendog.ChoseDns()
-		scrport := sendog.BuildStatusTable(_domain, dnsname)
-		sendog.Send(_domain, dnsname, scrport)
+		flagid2, scrport := sendog.BuildStatusTable(_domain, dnsname)
+		sendog.Send(_domain, dnsname, scrport, flagid2)
 	}
-	<-stop
-	fmt.Println("")
-	for i := 5; i >= 0; i-- {
-		fmt.Printf("\r检测完毕，等待%ds", i)
+	for {
+		var isbreak bool = true
+		LocalStauts.Range(func(k, v interface{}) bool {
+			isbreak = false
+			return false
+		})
+		if isbreak {
+			stop <- "i love u,lxk"
+			time.Sleep(time.Millisecond * 100)
+			break
+		}
 		time.Sleep(time.Second * 1)
 	}
+	for i := 5; i >= 0; i-- {
+		fmt.Printf("\r检测完毕，等待%ds\n", i)
+		time.Sleep(time.Second * 1)
+	}
+	sendog.Close()
 }

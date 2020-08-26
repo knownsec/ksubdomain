@@ -16,20 +16,17 @@ import (
 
 func Recv(device string, options *Options, flagID uint16) {
 	var (
-		snapshot_len int32         = 1024
-		promiscuous  bool          = false
-		timeout      time.Duration = -1 * time.Second
-		handle       *pcap.Handle
+		snapshotLen int32         = 1024
+		promiscuous bool          = false
+		timeout     time.Duration = -1 * time.Second
 	)
-	handle, _ = pcap.OpenLive(device, snapshot_len, promiscuous, timeout)
+	handle, _ := pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	err := handle.SetBPFFilter("udp and port 53")
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Use the handle as a packet source to process all packets
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	defer handle.Close()
-	success := 0 // 成功个数
 
 	var udp layers.UDP
 	var dns layers.DNS
@@ -59,16 +56,16 @@ func Recv(device string, options *Options, flagID uint16) {
 		var decoded []gopacket.LayerType
 		err = parser.DecodeLayers(packet.Data(), &decoded)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		if !dns.QR {
 			continue
 		}
-		if dns.ID == flagID {
+		if dns.ID/100 == flagID {
 			atomic.AddUint64(&RecvIndex, 1)
-			upd, _ := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
-			if _data, ok := LocalStauts.Load(uint32(upd.DstPort)); ok {
+			udp, _ := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
+			index := GenerateMapIndex(dns.ID%100, uint16(udp.DstPort))
+			if _data, ok := LocalStauts.Load(uint32(index)); ok {
 				data := _data.(StatusTable)
 				dnsName := data.Dns
 				if dnsnum, ok2 := DnsChoice.Load(dnsName); !ok2 {
@@ -76,10 +73,13 @@ func Recv(device string, options *Options, flagID uint16) {
 				} else {
 					DnsChoice.Store(dnsName, dnsnum.(int)+1)
 				}
-				LocalStack.Push(uint32(upd.DstPort))
-				LocalStauts.Delete(uint32(upd.DstPort))
+				if LocalStack.Len() <= 50000 {
+					LocalStack.Push(uint32(index))
+				}
+				LocalStauts.Delete(uint32(index))
 			}
 			if dns.ANCount > 0 {
+				atomic.AddUint64(&SuccessIndex, 1)
 				msg := ""
 				for _, v := range dns.Questions {
 					msg += string(v.Name) + " => "
@@ -92,7 +92,6 @@ func Recv(device string, options *Options, flagID uint16) {
 					msg += " => "
 				}
 				msg = strings.Trim(msg, " => ")
-				success++
 				if !issilent {
 					fmt.Println("\r" + msg)
 				}
@@ -105,7 +104,6 @@ func Recv(device string, options *Options, flagID uint16) {
 					w.Flush()
 				}
 			}
-			fmt.Printf("\rSuccess:%d Recv:%d ", success, RecvIndex)
 		}
 	}
 }

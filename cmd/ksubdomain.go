@@ -12,14 +12,14 @@ func test(options *core.Options) {
 	sendog := core.SendDog{}
 	ether := core.GetDevices(options.NetworkId)
 	ether.DstMac = net.HardwareAddr{0x5c, 0xc9, 0x09, 0x33, 0x34, 0x80}
-	sendog.Init(ether, []string{"8.8.8.8"})
+	sendog.Init(ether, []string{"8.8.8.8"}, 404)
 	defer sendog.Close()
 	var index int64 = 0
 	start := time.Now().UnixNano() / 1e6
 	flag := int64(15) // 15s
 	var now int64
 	for {
-		sendog.Send("seebug.org", "8.8.8.8", 1234)
+		sendog.Send("seebug.org", "8.8.8.8", 1234, 1)
 		index++
 		now = time.Now().UnixNano() / 1e6
 		tickTime := (now - start) / 1000
