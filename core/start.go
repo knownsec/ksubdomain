@@ -122,13 +122,12 @@ func Start(options *Options) {
 		})
 		if isbreak {
 			stop <- "i love u,lxk"
-			time.Sleep(time.Millisecond * 100)
 			break
 		}
 		time.Sleep(time.Second * 1)
 	}
 	for i := 5; i >= 0; i-- {
-		fmt.Printf("\r检测完毕，等待%ds\n", i)
+		fmt.Printf("检测完毕，等待%ds\n", i)
 		time.Sleep(time.Second * 1)
 	}
 	sendog.Close()
