@@ -19,11 +19,13 @@ type SendDog struct {
 	index          uint32
 	lock           *sync.RWMutex
 	increate_index bool // 是否使用index自增
+	flagID         uint16
 }
 
-func (d *SendDog) Init(ether EthTable, dns []string) {
+func (d *SendDog) Init(ether EthTable, dns []string, flagID uint16) {
 	d.ether = ether
 	d.dns = dns
+	d.flagID = flagID
 	var (
 		snapshot_len int32 = 1024
 		promiscuous  bool  = false
@@ -122,7 +124,7 @@ func (d *SendDog) Send(domain string, dnsname string, srcport uint16) {
 	}
 	// Our DNS header
 	dns := &layers.DNS{
-		ID:      404,
+		ID:      d.flagID,
 		QDCount: 1,
 		RD:      false, //递归查询标识
 	}

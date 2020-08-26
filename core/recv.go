@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func Recv(device string, options *Options) {
+func Recv(device string, options *Options, flagID uint16) {
 	var (
 		snapshot_len int32         = 1024
 		promiscuous  bool          = false
@@ -65,7 +65,7 @@ func Recv(device string, options *Options) {
 		if !dns.QR {
 			continue
 		}
-		if dns.ID == 404 {
+		if dns.ID == flagID {
 			atomic.AddUint64(&RecvIndex, 1)
 			upd, _ := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
 			if _data, ok := LocalStauts.Load(uint32(upd.DstPort)); ok {

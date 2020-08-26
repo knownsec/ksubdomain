@@ -18,12 +18,15 @@ func Start(options *Options) {
 	fmt.Println(version)
 	ether := GetDevices(options.NetworkId)
 	LocalStack = NewStack()
-	go Recv(ether.Device, options)
 	fmt.Println("启动接收模块,设置rate:", options.Rate, "pps")
 	fmt.Println("DNS:", options.Resolvers)
+	// 设定接收的ID
+	flagID := uint16(RandInt64(400, 700))
+	go Recv(ether.Device, options, flagID)
 	sendog := SendDog{}
-	sendog.Init(ether, options.Resolvers)
+	sendog.Init(ether, options.Resolvers, flagID)
 	defer sendog.Close()
+
 	var f io.Reader
 	if options.Stdin {
 		f = os.Stdin
