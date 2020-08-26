@@ -20,15 +20,16 @@ type Options struct {
 	TTL       bool
 	Verify    bool
 	Stdin     bool
+	Debug     bool
 }
 
 // ParseOptions parses the command line flags provided by a user
 func ParseOptions() *Options {
 	options := &Options{}
-	bandwith := *flag.String("b", "1M", "宽带的下行速度，可以5M,5K,5G")
+	bandwith := flag.String("b", "1M", "宽带的下行速度，可以5M,5K,5G")
 	flag.StringVar(&options.Domain, "d", "", "爆破域名")
 	flag.StringVar(&options.FileName, "f", "", "字典路径,-d下文件为子域名字典，-verify下文件为需要验证的域名")
-	resolvers := *flag.String("s", "", "resolvers文件路径,默认使用内置DNS")
+	resolvers := flag.String("s", "", "resolvers文件路径,默认使用内置DNS")
 	flag.StringVar(&options.Output, "o", "", "输出文件路径")
 	flag.BoolVar(&options.Test, "test", false, "测试本地最大发包数")
 	flag.IntVar(&options.NetworkId, "e", -1, "默认网络设备ID,默认-1，如果有多个网络设备会在命令行中选择")
@@ -39,8 +40,8 @@ func ParseOptions() *Options {
 	options.Stdin = hasStdin()
 	ShowBanner()
 	// handle resolver
-	if resolvers != "" {
-		rs, err := LinesInFile(resolvers)
+	if *resolvers != "" {
+		rs, err := LinesInFile(*resolvers)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -50,8 +51,8 @@ func ParseOptions() *Options {
 		options.Resolvers = defaultDns
 	}
 	var rate int64
-	suffix := string([]rune(bandwith)[len(bandwith)-1])
-	rate, _ = strconv.ParseInt(string([]rune(bandwith)[0:len(bandwith)-1]), 10, 64)
+	suffix := string([]rune(*bandwith)[len(*bandwith)-1])
+	rate, _ = strconv.ParseInt(string([]rune(*bandwith)[0:len(*bandwith)-1]), 10, 64)
 	switch suffix {
 	case "G":
 		fallthrough
@@ -73,6 +74,10 @@ func ParseOptions() *Options {
 	options.Rate = rate
 	if options.Domain == "" && !hasStdin() && (!options.Verify && options.FileName == "") {
 		flag.Usage()
+		os.Exit(0)
+	}
+	if options.FileName != "" && !FileExists(options.FileName) {
+		fmt.Printf("文件:%s不存在!\n", options.FileName)
 		os.Exit(0)
 	}
 	return options

@@ -49,7 +49,7 @@ func Start(options *Options) {
 	}
 	r := bufio.NewReader(f)
 
-	limiter := ratelimit.NewLimiter(ratelimit.Every(time.Duration(time.Second.Nanoseconds()/options.Rate)), 1000000)
+	limiter := ratelimit.NewLimiter(ratelimit.Every(time.Duration(time.Second.Nanoseconds()/options.Rate)), int(options.Rate))
 	ctx := context.Background()
 	// 协程重发线程
 	stop := make(chan string)
@@ -107,6 +107,9 @@ func Start(options *Options) {
 		sendog.Send(_domain, dnsname, scrport)
 	}
 	<-stop
-	fmt.Println("检测完毕,等待最后5s")
-	time.Sleep(time.Second * 5)
+	fmt.Println("")
+	for i := 5; i >= 0; i-- {
+		fmt.Printf("\r检测完毕，等待%ds", i)
+		time.Sleep(time.Second * 1)
+	}
 }

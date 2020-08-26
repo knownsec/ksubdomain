@@ -78,7 +78,6 @@ func (d *SendDog) BuildStatusTable(domain string, dns string) uint16 {
 				d.index = v
 				break
 			} else {
-				//fmt.Println("等待...")
 				time.Sleep(520 * time.Millisecond)
 			}
 		}
