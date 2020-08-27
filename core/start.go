@@ -6,64 +6,56 @@ import (
 	"fmt"
 	"github.com/google/gopacket/pcap"
 	ratelimit "golang.org/x/time/rate"
+	"io"
+	"math/rand"
 	"os"
-	"strconv"
+	"strings"
+	"sync/atomic"
 	"time"
 )
 
-func Start(domain string, filename string, bandwith string, reslovers []string, output string, netid int) {
-	if filename != "" && string(domain[0]) != "." {
-		domain = "." + domain
-	}
-	var rate int64
-	suffix := string([]rune(bandwith)[len(bandwith)-1])
-	rate, _ = strconv.ParseInt(string([]rune(bandwith)[0:len(bandwith)-1]), 10, 64)
-	switch suffix {
-	case "G":
-		fallthrough
-	case "g":
-		rate *= 1000000000
-	case "M":
-		fallthrough
-	case "m":
-		rate *= 1000000
-	case "K":
-		fallthrough
-	case "k":
-		rate *= 1000
-	default:
-		fmt.Printf("unknown bandwith suffix '%s' (supported suffixes are G,M and K)\n", suffix)
-	}
-	packSize := int64(100) // 一个DNS包大概有74byte
-	rate = rate / packSize
-
+func Start(options *Options) {
 	version := pcap.Version()
 	fmt.Println(version)
-	ether := GetDevices(netid)
+	ether := GetDevices(options.NetworkId)
 	LocalStack = NewStack()
-	go Recv(ether.Device, output)
-	fmt.Println("启动接收模块,设置rate:", rate, "pps")
-	defaultDns := []string{"223.5.5.5", "223.6.6.6", "180.76.76.76", "119.29.29.29", "182.254.116.116", "114.114.114.114"}
-	if len(reslovers) > 0 {
-		defaultDns = reslovers
-	}
-	fmt.Println("Default DNS", defaultDns)
+	fmt.Println("启动接收模块,设置rate:", options.Rate, "pps")
+	fmt.Println("DNS:", options.Resolvers)
+	// 设定接收的ID
+	flagID := uint16(RandInt64(400, 654))
+	go Recv(ether.Device, options, flagID)
 	sendog := SendDog{}
-	sendog.Init(ether, defaultDns)
-	defer sendog.Close()
-	var f *os.File
-	if filename != "" {
-		f, _ = os.Open(filename)
-	} else {
-		f = os.Stdin
-	}
+	sendog.Init(ether, options.Resolvers, flagID)
 
-	defer f.Close()
+	var f io.Reader
+	if options.Stdin {
+		f = os.Stdin
+	} else if options.Domain != "" {
+		if options.FileName == "" {
+			fmt.Println("加载内置字典")
+			f = strings.NewReader(DefaultSubdomain)
+		} else {
+			f2, err := os.Open(options.FileName)
+			defer f2.Close()
+			if err != nil {
+				panic(err)
+			}
+			f = f2
+		}
+	} else if options.Verify {
+		f2, err := os.Open(options.FileName)
+		defer f2.Close()
+		if err != nil {
+			panic(err)
+		}
+		f = f2
+	}
 	r := bufio.NewReader(f)
 
-	limiter := ratelimit.NewLimiter(ratelimit.Every(time.Duration(time.Second.Nanoseconds()/rate)), 1000000)
+	limiter := ratelimit.NewLimiter(ratelimit.Every(time.Duration(time.Second.Nanoseconds()/options.Rate)), int(options.Rate))
 	ctx := context.Background()
 	// 协程重发线程
+	stop := make(chan string)
 	go func() {
 		for {
 			// 循环检测超时的队列
@@ -71,8 +63,8 @@ func Start(domain string, filename string, bandwith string, reslovers []string, 
 			LocalStauts.Range(func(k, v interface{}) bool {
 				index := k.(uint32)
 				value := v.(StatusTable)
-				if value.Retry >= 30 {
-					//fmt.Println("失败", value)
+				if value.Retry >= 25 {
+					atomic.AddUint64(&FaildIndex, 1)
 					LocalStauts.Delete(index)
 					return true
 				}
@@ -82,13 +74,24 @@ func Start(domain string, filename string, bandwith string, reslovers []string, 
 					value.Time = time.Now().Unix()
 					value.Dns = sendog.ChoseDns()
 					LocalStauts.Store(index, value)
-					srcport := uint16(index)
-					sendog.Send(value.Domain, value.Dns, srcport)
+					flag2, srcport := GenerateFlagIndexFromMap(index)
+					sendog.Send(value.Domain, value.Dns, srcport, flag2)
 				}
+				time.Sleep(time.Microsecond * time.Duration(rand.Intn(300)+100))
 				return true
 			})
-			time.Sleep(time.Second * 1)
-
+		}
+	}()
+	go func() {
+		t := time.NewTicker(time.Millisecond * 300)
+		defer t.Stop()
+		for {
+			select {
+			case <-t.C:
+				fmt.Printf("\rSuccess:%d Sent:%d Recved:%d Faild:%d", SuccessIndex, SentIndex, RecvIndex, FaildIndex)
+			case <-stop:
+				return
+			}
 		}
 	}()
 	for {
@@ -99,19 +102,18 @@ func Start(domain string, filename string, bandwith string, reslovers []string, 
 		}
 		msg := string(line)
 		if msg == "" {
-			break
+			continue
 		}
 		var _domain string
-		if filename != "" {
-			_domain = msg + domain
-		} else {
+		if options.Verify || options.Stdin {
 			_domain = msg
+		} else {
+			_domain = msg + "." + options.Domain
 		}
 		dnsname := sendog.ChoseDns()
-		scrport := sendog.BuildStatusTable(_domain, dnsname)
-		sendog.Send(_domain, dnsname, scrport)
+		flagid2, scrport := sendog.BuildStatusTable(_domain, dnsname)
+		sendog.Send(_domain, dnsname, scrport, flagid2)
 	}
-
 	for {
 		var isbreak bool = true
 		LocalStauts.Range(func(k, v interface{}) bool {
@@ -119,10 +121,14 @@ func Start(domain string, filename string, bandwith string, reslovers []string, 
 			return false
 		})
 		if isbreak {
+			stop <- "i love u,lxk"
 			break
 		}
-		time.Sleep(700 * time.Millisecond)
+		time.Sleep(time.Second * 1)
 	}
-	fmt.Println("检测完毕,等待最后5s")
-	time.Sleep(time.Second * 5)
+	for i := 5; i >= 0; i-- {
+		fmt.Printf("检测完毕，等待%ds\n", i)
+		time.Sleep(time.Second * 1)
+	}
+	sendog.Close()
 }

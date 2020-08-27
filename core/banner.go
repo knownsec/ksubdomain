@@ -2,6 +2,7 @@ package core
 
 import "fmt"
 
+const Version = "0.1"
 const banner = `
  _  __   _____       _         _                       _
 | |/ /  / ____|     | |       | |                     (_)
@@ -13,4 +14,5 @@ const banner = `
 
 func ShowBanner() {
 	fmt.Println(banner)
+	fmt.Println("Current Version: ", Version)
 }

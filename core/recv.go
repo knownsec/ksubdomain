@@ -9,26 +9,24 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
 
-func Recv(device string, output string) {
+func Recv(device string, options *Options, flagID uint16) {
 	var (
-		snapshot_len int32         = 1024
-		promiscuous  bool          = false
-		timeout      time.Duration = -1 * time.Second
-		handle       *pcap.Handle
+		snapshotLen int32         = 1024
+		promiscuous bool          = false
+		timeout     time.Duration = -1 * time.Second
 	)
-	handle, _ = pcap.OpenLive(device, snapshot_len, promiscuous, timeout)
+	handle, _ := pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	err := handle.SetBPFFilter("udp and port 53")
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Use the handle as a packet source to process all packets
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	defer handle.Close()
-	success := 0 // 成功个数
 
 	var udp layers.UDP
 	var dns layers.DNS
@@ -38,12 +36,14 @@ func Recv(device string, output string) {
 	parser := gopacket.NewDecodingLayerParser(
 		layers.LayerTypeEthernet, &eth, &ipv4, &udp, &dns)
 	var isWrite bool = false
-	if output != "" {
+	var isttl bool = options.TTL
+	var issilent bool = options.Silent
+	if options.Output != "" {
 		isWrite = true
 	}
 	var foutput *os.File
 	if isWrite {
-		foutput, err = os.OpenFile(output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+		foutput, err = os.OpenFile(options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
 		if err != nil {
 			log.Panicln(err)
 		}
@@ -56,16 +56,16 @@ func Recv(device string, output string) {
 		var decoded []gopacket.LayerType
 		err = parser.DecodeLayers(packet.Data(), &decoded)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 		if !dns.QR {
 			continue
 		}
-		if dns.ID == 404 {
+		if dns.ID/100 == flagID {
 			atomic.AddUint64(&RecvIndex, 1)
-			upd, _ := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
-			if _data, ok := LocalStauts.Load(uint32(upd.DstPort)); ok {
+			udp, _ := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
+			index := GenerateMapIndex(dns.ID%100, uint16(udp.DstPort))
+			if _data, ok := LocalStauts.Load(uint32(index)); ok {
 				data := _data.(StatusTable)
 				dnsName := data.Dns
 				if dnsnum, ok2 := DnsChoice.Load(dnsName); !ok2 {
@@ -73,19 +73,28 @@ func Recv(device string, output string) {
 				} else {
 					DnsChoice.Store(dnsName, dnsnum.(int)+1)
 				}
-				LocalStack.Push(uint32(upd.DstPort))
-				LocalStauts.Delete(uint32(upd.DstPort))
+				if LocalStack.Len() <= 50000 {
+					LocalStack.Push(uint32(index))
+				}
+				LocalStauts.Delete(uint32(index))
 			}
 			if dns.ANCount > 0 {
+				atomic.AddUint64(&SuccessIndex, 1)
 				msg := ""
 				for _, v := range dns.Questions {
 					msg += string(v.Name) + " => "
 				}
 				for _, v := range dns.Answers {
-					msg += v.String() + " ttl:" + strconv.Itoa(int(v.TTL)) + " "
+					msg += v.String()
+					if isttl {
+						msg += " ttl:" + strconv.Itoa(int(v.TTL))
+					}
+					msg += " => "
 				}
-				success++
-				fmt.Println("\r" + msg)
+				msg = strings.Trim(msg, " => ")
+				if !issilent {
+					fmt.Println("\r" + msg)
+				}
 				if isWrite {
 					w := bufio.NewWriter(foutput)
 					_, err = w.WriteString(msg + "\n")
@@ -95,7 +104,6 @@ func Recv(device string, output string) {
 					w.Flush()
 				}
 			}
-			fmt.Printf("\rSuccess:%d Recv:%d ", success, RecvIndex)
 		}
 	}
 }

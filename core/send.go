@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -16,14 +17,18 @@ type SendDog struct {
 	ether          EthTable
 	dns            []string
 	handle         *pcap.Handle
-	index          uint32
+	index          uint16
 	lock           *sync.RWMutex
-	increate_index bool // 是否使用index自增
+	increate_index bool   // 是否使用index自增
+	flagID         uint16 // dnsid 前3位
+	flagID2        uint16 // dnsid 后2位
 }
 
-func (d *SendDog) Init(ether EthTable, dns []string) {
+func (d *SendDog) Init(ether EthTable, dns []string, flagID uint16) {
 	d.ether = ether
 	d.dns = dns
+	d.flagID = flagID
+	d.flagID2 = 0
 	var (
 		snapshot_len int32 = 1024
 		promiscuous  bool  = false
@@ -62,38 +67,40 @@ func (d *SendDog) ChoseDns() string {
 	//	return dnsname
 	//}
 }
-func (d *SendDog) BuildStatusTable(domain string, dns string) uint16 {
-	// 生成本地状态表，返回ID和SrcPort参数
+func (d *SendDog) BuildStatusTable(domain string, dns string) (uint16, uint16) {
+	// 生成本地状态表，返回需要的flagID和SrcPort参数
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	if d.index >= 60000 {
+		d.flagID2++
+		d.index = 10000
+	}
+	if d.flagID2 > 99 {
 		d.increate_index = false
 	}
 	if d.increate_index {
 		d.index++
 	} else {
 		for {
-			v, error := LocalStack.Pop()
-			if error == nil {
-				d.index = v
+			v, error2 := LocalStack.Pop()
+			if error2 == nil {
+				d.flagID2, d.index = GenerateFlagIndexFromMap(v)
 				break
 			} else {
-				//fmt.Println("等待...")
 				time.Sleep(520 * time.Millisecond)
 			}
 		}
 	}
-	for {
-		if _, ok := LocalStauts.Load(d.index); !ok {
-			LocalStauts.Store(d.index, StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0})
-			break
-		}
-		d.index++
+	index := GenerateMapIndex(d.flagID2, d.index)
+	if _, ok := LocalStauts.Load(index); !ok {
+		LocalStauts.Store(uint32(index), StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0})
+	} else {
+		fmt.Println("error", index)
 	}
-	return uint16(d.index)
+	return d.flagID2, d.index
 }
 
-func (d *SendDog) Send(domain string, dnsname string, srcport uint16) {
+func (d *SendDog) Send(domain string, dnsname string, srcport uint16, flagid uint16) {
 	DstIp := net.ParseIP(dnsname).To4()
 	eth := &layers.Ethernet{
 		SrcMAC:       d.ether.SrcMac,
@@ -117,13 +124,12 @@ func (d *SendDog) Send(domain string, dnsname string, srcport uint16) {
 	}
 	// Our UDP header
 	udp := &layers.UDP{
-		//SrcPort: layers.UDPPort(RandInt64(10000, 50000)),
 		SrcPort: layers.UDPPort(srcport),
 		DstPort: layers.UDPPort(53),
 	}
 	// Our DNS header
 	dns := &layers.DNS{
-		ID:      404,
+		ID:      d.flagID*100 + flagid,
 		QDCount: 1,
 		RD:      false, //递归查询标识
 	}
@@ -151,8 +157,21 @@ func (d *SendDog) Send(domain string, dnsname string, srcport uint16) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	atomic.AddUint64(&SentIndex, 1)
 
 }
 func (d *SendDog) Close() {
 	d.handle.Close()
+}
+
+func GenerateMapIndex(flagid2 uint16, index uint16) int {
+	// 由flagid和index生成map中的唯一id
+	return int(flagid2*60000) + int(index)
+}
+func GenerateFlagIndexFromMap(index uint32) (uint16, uint16) {
+	// 从已经生成好的map index中返回flagid和index
+	yuzhi := uint32(60000)
+	flag2 := index / yuzhi
+	index2 := index % yuzhi
+	return uint16(flag2), uint16(index2)
 }

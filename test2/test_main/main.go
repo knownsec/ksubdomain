@@ -5,8 +5,10 @@ import (
 )
 
 func main() {
-	bandwith := "2M" // K M G
-	domain := ".qq.com"
-	filename := "/Users/boyhack/study/子域名收集/源码资料/ESD-master/ESD/subs.esd"
-	core.Start(domain, filename, bandwith, []string{}, "")
+	core.ShowBanner()
+	defaultDns := []string{"223.5.5.5", "223.6.6.6", "180.76.76.76", "119.29.29.29", "182.254.116.116", "114.114.114.115"}
+
+	filename := "/Users/boyhack/Downloads/Amass-master 2/examples/wordlists/all.txt"
+
+	core.Start(&core.Options{Domain: "baidu.com", Rate: 30000, FileName: filename, Resolvers: defaultDns, Output: "", Test: false, NetworkId: 0, Silent: false, TTL: false, Verify: false, Stdin: false, Debug: true})
 }
