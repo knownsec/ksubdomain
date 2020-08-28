@@ -91,7 +91,7 @@ func Recv(device string, options *Options, flagID uint16) {
 					msg += " => "
 				}
 				msg = strings.Trim(msg, " => ")
-				gologger.Silentf("%s\n", msg)
+				gologger.Silentf("\r%s\n", msg)
 				if isWrite {
 					w := bufio.NewWriter(foutput)
 					_, err = w.WriteString(msg + "\n")

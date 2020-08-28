@@ -34,7 +34,7 @@ Usage of ./ksubdomain:
   -s string
         resolvers文件路径,默认使用内置DNS
   -silent
-        使用后屏幕将不会输出结果
+        使用后屏幕将只输出域名
   -test
         测试本地最大发包数
   -ttl
