@@ -3,10 +3,10 @@ package core
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"github.com/google/gopacket/pcap"
 	ratelimit "golang.org/x/time/rate"
 	"io"
+	"ksubdomain/gologger"
 	"math/rand"
 	"os"
 	"strings"
@@ -16,11 +16,11 @@ import (
 
 func Start(options *Options) {
 	version := pcap.Version()
-	fmt.Println(version)
-	ether := GetDevices(options.NetworkId)
+	gologger.Infof(version + "\n")
+	ether := GetDevices(options)
 	LocalStack = NewStack()
-	fmt.Println("启动接收模块,设置rate:", options.Rate, "pps")
-	fmt.Println("DNS:", options.Resolvers)
+	gologger.Infof("设置rate:%dpps\n", options.Rate)
+	gologger.Infof("DNS:%s\n", options.Resolvers)
 	// 设定接收的ID
 	flagID := uint16(RandInt64(400, 654))
 	go Recv(ether.Device, options, flagID)
@@ -32,7 +32,7 @@ func Start(options *Options) {
 		f = os.Stdin
 	} else if options.Domain != "" {
 		if options.FileName == "" {
-			fmt.Println("加载内置字典")
+			gologger.Infof("加载内置字典\n")
 			f = strings.NewReader(DefaultSubdomain)
 		} else {
 			f2, err := os.Open(options.FileName)
@@ -88,7 +88,7 @@ func Start(options *Options) {
 		for {
 			select {
 			case <-t.C:
-				fmt.Printf("\rSuccess:%d Sent:%d Recved:%d Faild:%d", SuccessIndex, SentIndex, RecvIndex, FaildIndex)
+				gologger.Printf("\rSuccess:%d Sent:%d Recved:%d Faild:%d", SuccessIndex, SentIndex, RecvIndex, FaildIndex)
 			case <-stop:
 				return
 			}
@@ -127,7 +127,7 @@ func Start(options *Options) {
 		time.Sleep(time.Second * 1)
 	}
 	for i := 5; i >= 0; i-- {
-		fmt.Printf("检测完毕，等待%ds\n", i)
+		gologger.Printf("检测完毕，等待%ds\n", i)
 		time.Sleep(time.Second * 1)
 	}
 	sendog.Close()

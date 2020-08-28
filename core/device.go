@@ -2,10 +2,10 @@ package core
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"ksubdomain/gologger"
 	"log"
 	"net"
 	"os"
@@ -19,8 +19,9 @@ import (
 //SrcMac    net.HardwareAddr = net.HardwareAddr{0xf0, 0x18, 0x98, 0x1a, 0x56, 0xe8}
 //DstMac    net.HardwareAddr = net.HardwareAddr{0x5c, 0xc9, 0x99, 0x33, 0x34, 0x80
 
-func GetDevices(defaultSelect int) EthTable {
+func GetDevices(options *Options) EthTable {
 	// Find all devices
+	defaultSelect := options.NetworkId
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
 		log.Fatal(err)
@@ -32,24 +33,27 @@ func GetDevices(defaultSelect int) EthTable {
 		for _, address := range d.Addresses {
 			ip := address.IP
 			if ip.To4() != nil && !ip.IsLoopback() {
-				fmt.Printf("\n[%d] Name: %s\n", len(keys), d.Name)
-				fmt.Println("Description: ", d.Description)
-				fmt.Println("Devices addresses: ", d.Description)
-				fmt.Println("IP address: ", ip)
-				fmt.Println("Subnet mask: ", address.Netmask)
+				gologger.Printf("\n[%d] Name: %s\n", len(keys), d.Name)
+				gologger.Printf("Description: %s\n", d.Description)
+				gologger.Printf("Devices addresses: %s\n", d.Description)
+				gologger.Printf("IP address: %s\n", ip)
+				gologger.Printf("Subnet mask: %s\n", address.Netmask.String())
 				data[d.Name] = ip
 				keys = append(keys, d.Name)
 			}
 		}
 	}
 	if len(keys) == 0 {
-		panic("获取不到可用的设备名称")
+		gologger.Fatalf("获取不到可用的设备名称\n")
 	} else if len(keys) == 1 {
 		defaultSelect = 0
 	}
 	if defaultSelect == -1 {
 		var i int
-		fmt.Println("选择一个可用网卡ID:")
+		if options.Silent {
+			gologger.Fatalf("slient模式下需要指定-e参数\n")
+		}
+		gologger.Infof("选择一个可用网卡ID:")
 		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
 			panic("There were errors reading, exiting program.")
@@ -66,12 +70,11 @@ func GetDevices(defaultSelect int) EthTable {
 	}
 	deviceName := keys[defaultSelect]
 	ip := data[deviceName]
-	fmt.Println("Use Device:", deviceName)
-	fmt.Println("Use IP:", ip)
+	gologger.Infof("Use Device: %s\n", deviceName)
+	gologger.Infof("Use IP:%s\n", ip.String())
 	c := GetGateMacAddress(deviceName)
-	fmt.Println("Local Mac:", c[1])
-	fmt.Println("GateWay Mac:", c[0])
-	fmt.Println("")
+	gologger.Infof("Local Mac:%s\n", c[1])
+	gologger.Infof("GateWay Mac:%s\n", c[0])
 	return EthTable{ip, deviceName, c[1], c[0]}
 }
 
@@ -101,7 +104,7 @@ func GetGateMacAddress(dvice string) [2]net.HardwareAddr {
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 		for {
 			packet, err := packetSource.NextPacket()
-			fmt.Print(".")
+			gologger.Printf(".")
 			if err != nil {
 				continue
 			}
@@ -132,6 +135,7 @@ func GetGateMacAddress(dvice string) [2]net.HardwareAddr {
 	for {
 		select {
 		case c = <-_signal:
+			gologger.Printf("\n")
 			goto END
 		default:
 			_, _ = net.LookupHost(domain)
@@ -139,7 +143,5 @@ func GetGateMacAddress(dvice string) [2]net.HardwareAddr {
 		}
 	}
 END:
-
-	fmt.Print("\n")
 	return c
 }

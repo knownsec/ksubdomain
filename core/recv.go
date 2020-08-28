@@ -2,10 +2,10 @@ package core
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"ksubdomain/gologger"
 	"log"
 	"os"
 	"strconv"
@@ -23,7 +23,7 @@ func Recv(device string, options *Options, flagID uint16) {
 	handle, _ := pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	err := handle.SetBPFFilter("udp and port 53")
 	if err != nil {
-		log.Fatal(err)
+		gologger.Fatalf("SetBPFFilter Faild:%s\n", err.Error())
 	}
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	defer handle.Close()
@@ -37,7 +37,6 @@ func Recv(device string, options *Options, flagID uint16) {
 		layers.LayerTypeEthernet, &eth, &ipv4, &udp, &dns)
 	var isWrite bool = false
 	var isttl bool = options.TTL
-	var issilent bool = options.Silent
 	if options.Output != "" {
 		isWrite = true
 	}
@@ -92,14 +91,12 @@ func Recv(device string, options *Options, flagID uint16) {
 					msg += " => "
 				}
 				msg = strings.Trim(msg, " => ")
-				if !issilent {
-					fmt.Println("\r" + msg)
-				}
+				gologger.Silentf("%s\n", msg)
 				if isWrite {
 					w := bufio.NewWriter(foutput)
 					_, err = w.WriteString(msg + "\n")
 					if err != nil {
-						fmt.Println(err)
+						gologger.Errorf("写入结果文件失败.\n", err.Error())
 					}
 					w.Flush()
 				}

@@ -2,7 +2,7 @@ package core
 
 import (
 	"flag"
-	"fmt"
+	"ksubdomain/gologger"
 	"log"
 	"os"
 	"strconv"
@@ -25,7 +25,6 @@ type Options struct {
 
 // ParseOptions parses the command line flags provided by a user
 func ParseOptions() *Options {
-	ShowBanner()
 	options := &Options{}
 	bandwith := flag.String("b", "1M", "宽带的下行速度，可以5M,5K,5G")
 	flag.StringVar(&options.Domain, "d", "", "爆破域名")
@@ -39,6 +38,10 @@ func ParseOptions() *Options {
 	flag.BoolVar(&options.Verify, "verify", false, "验证模式")
 	flag.Parse()
 	options.Stdin = hasStdin()
+	if options.Silent {
+		gologger.MaxLevel = gologger.Silent
+	}
+	ShowBanner()
 	// handle resolver
 	if *resolvers != "" {
 		rs, err := LinesInFile(*resolvers)
@@ -67,7 +70,7 @@ func ParseOptions() *Options {
 	case "k":
 		rate *= 1000
 	default:
-		fmt.Printf("unknown bandwith suffix '%s' (supported suffixes are G,M and K)\n", suffix)
+		gologger.Fatalf("unknown bandwith suffix '%s' (supported suffixes are G,M and K)\n", suffix)
 	}
 	packSize := int64(100) // 一个DNS包大概有74byte
 	rate = rate / packSize
@@ -77,8 +80,7 @@ func ParseOptions() *Options {
 		os.Exit(0)
 	}
 	if options.FileName != "" && !FileExists(options.FileName) {
-		fmt.Printf("文件:%s不存在!\n", options.FileName)
-		os.Exit(0)
+		gologger.Fatalf("文件:%s 不存在!\n", options.FileName)
 	}
 	return options
 }

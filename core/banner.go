@@ -1,6 +1,8 @@
 package core
 
-import "fmt"
+import (
+	"ksubdomain/gologger"
+)
 
 const Version = "0.1"
 const banner = `
@@ -10,9 +12,10 @@ const banner = `
 |  <    \___ \| | | | '_ \ / _| |/ _ \| '_   _ \ / _  | | '_ \
 | . \   ____) | |_| | |_) | (_| | (_) | | | | | | (_| | | | | |
 |_|\_\ |_____/ \__,_|_.__/ \__,_|\___/|_| |_| |_|\__,_|_|_| |_|
+
 `
 
 func ShowBanner() {
-	fmt.Println(banner)
-	fmt.Println("Current Version: ", Version)
+	gologger.Printf(banner)
+	gologger.Printf("Current Version: %s\n", Version)
 }
