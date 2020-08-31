@@ -6,7 +6,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"ksubdomain/gologger"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -44,7 +43,7 @@ func Recv(device string, options *Options, flagID uint16) {
 	if isWrite {
 		foutput, err = os.OpenFile(options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
 		if err != nil {
-			log.Panicln(err)
+			gologger.Errorf("写入结果文件失败：%s\n", err.Error())
 		}
 	}
 	for {
@@ -101,6 +100,7 @@ func Recv(device string, options *Options, flagID uint16) {
 					w.Flush()
 				}
 			}
+			PrintStatus()
 		}
 	}
 }

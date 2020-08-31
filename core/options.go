@@ -3,14 +3,13 @@ package core
 import (
 	"flag"
 	"ksubdomain/gologger"
-	"log"
 	"os"
 	"strconv"
 )
 
 type Options struct {
 	Rate      int64
-	Domain    string
+	Domain    []string
 	FileName  string
 	Resolvers []string
 	Output    string
@@ -26,8 +25,10 @@ type Options struct {
 // ParseOptions parses the command line flags provided by a user
 func ParseOptions() *Options {
 	options := &Options{}
+
 	bandwith := flag.String("b", "1M", "宽带的下行速度，可以5M,5K,5G")
-	flag.StringVar(&options.Domain, "d", "", "爆破域名")
+	domain := flag.String("d", "", "爆破域名")
+	domain_list := flag.String("dl", "", "从文件中读取爆破域名")
 	flag.StringVar(&options.FileName, "f", "", "字典路径,-d下文件为子域名字典，-verify下文件为需要验证的域名")
 	resolvers := flag.String("s", "", "resolvers文件路径,默认使用内置DNS")
 	flag.StringVar(&options.Output, "o", "", "输出文件路径")
@@ -46,12 +47,23 @@ func ParseOptions() *Options {
 	if *resolvers != "" {
 		rs, err := LinesInFile(*resolvers)
 		if err != nil {
-			log.Panic(err)
+			gologger.Fatalf("读取resolvers文件失败:%s\n", err.Error())
 		}
 		options.Resolvers = rs
 	} else {
 		defaultDns := []string{"223.5.5.5", "223.6.6.6", "180.76.76.76", "119.29.29.29", "182.254.116.116", "114.114.114.115"}
 		options.Resolvers = defaultDns
+	}
+	// handle domain
+	if *domain != "" {
+		options.Domain = append(options.Domain, *domain)
+	}
+	if *domain_list != "" {
+		dl, err := LinesInFile(*resolvers)
+		if err != nil {
+			gologger.Fatalf("读取domain文件失败:%s\n", err.Error())
+		}
+		options.Domain = append(dl, options.Domain...)
 	}
 	var rate int64
 	suffix := string([]rune(*bandwith)[len(*bandwith)-1])
@@ -75,9 +87,12 @@ func ParseOptions() *Options {
 	packSize := int64(100) // 一个DNS包大概有74byte
 	rate = rate / packSize
 	options.Rate = rate
-	if options.Domain == "" && !hasStdin() && (!options.Verify && options.FileName == "") && !options.Test {
+	if len(options.Domain) == 0 && !hasStdin() && (!options.Verify && options.FileName == "") && !options.Test {
 		flag.Usage()
 		os.Exit(0)
+	}
+	if len(options.Domain) > 0 && options.Verify {
+		gologger.Fatalf("-d 与 -verify参数不可以同时出现!")
 	}
 	if options.FileName != "" && !FileExists(options.FileName) {
 		gologger.Fatalf("文件:%s 不存在!\n", options.FileName)

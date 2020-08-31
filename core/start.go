@@ -14,6 +14,9 @@ import (
 	"time"
 )
 
+func PrintStatus() {
+	gologger.Printf("\rSuccess:%d Sent:%d Recved:%d Faild:%d", SuccessIndex, SentIndex, RecvIndex, FaildIndex)
+}
 func Start(options *Options) {
 	version := pcap.Version()
 	gologger.Infof(version + "\n")
@@ -28,9 +31,21 @@ func Start(options *Options) {
 	sendog.Init(ether, options.Resolvers, flagID)
 
 	var f io.Reader
+	// handle Stdin
 	if options.Stdin {
-		f = os.Stdin
-	} else if options.Domain != "" {
+		if options.Verify {
+			f = os.Stdin
+		} else {
+			scanner := bufio.NewScanner(os.Stdin)
+			scanner.Split(bufio.ScanLines)
+			for scanner.Scan() {
+				options.Domain = append(options.Domain, scanner.Text())
+			}
+		}
+	}
+
+	// handle dict
+	if len(options.Domain) > 0 {
 		if options.FileName == "" {
 			gologger.Infof("加载内置字典\n")
 			f = strings.NewReader(DefaultSubdomain)
@@ -38,24 +53,26 @@ func Start(options *Options) {
 			f2, err := os.Open(options.FileName)
 			defer f2.Close()
 			if err != nil {
-				panic(err)
+				gologger.Fatalf("打开文件:%s 出现错误:%s", options.FileName, err.Error())
 			}
 			f = f2
 		}
-	} else if options.Verify {
+	}
+
+	if options.Verify && options.FileName != "" {
 		f2, err := os.Open(options.FileName)
 		defer f2.Close()
 		if err != nil {
-			panic(err)
+			gologger.Fatalf("打开文件:%s 出现错误:%s", options.FileName, err.Error())
 		}
 		f = f2
 	}
+
 	r := bufio.NewReader(f)
 
 	limiter := ratelimit.NewLimiter(ratelimit.Every(time.Duration(time.Second.Nanoseconds()/options.Rate)), int(options.Rate))
 	ctx := context.Background()
 	// 协程重发线程
-	stop := make(chan string)
 	go func() {
 		for {
 			// 循环检测超时的队列
@@ -82,18 +99,6 @@ func Start(options *Options) {
 			})
 		}
 	}()
-	go func() {
-		t := time.NewTicker(time.Millisecond * 300)
-		defer t.Stop()
-		for {
-			select {
-			case <-t.C:
-				gologger.Printf("\rSuccess:%d Sent:%d Recved:%d Faild:%d", SuccessIndex, SentIndex, RecvIndex, FaildIndex)
-			case <-stop:
-				return
-			}
-		}
-	}()
 	for {
 		_ = limiter.Wait(ctx)
 		line, _, err := r.ReadLine()
@@ -101,18 +106,18 @@ func Start(options *Options) {
 			break
 		}
 		msg := string(line)
-		if msg == "" {
-			continue
-		}
-		var _domain string
-		if options.Verify || options.Stdin {
-			_domain = msg
+		if options.Verify {
+			dnsname := sendog.ChoseDns()
+			flagid2, scrport := sendog.BuildStatusTable(msg, dnsname)
+			sendog.Send(msg, dnsname, scrport, flagid2)
 		} else {
-			_domain = msg + "." + options.Domain
+			for _, _domain := range options.Domain {
+				_domain = msg + "." + _domain
+				dnsname := sendog.ChoseDns()
+				flagid2, scrport := sendog.BuildStatusTable(_domain, dnsname)
+				sendog.Send(_domain, dnsname, scrport, flagid2)
+			}
 		}
-		dnsname := sendog.ChoseDns()
-		flagid2, scrport := sendog.BuildStatusTable(_domain, dnsname)
-		sendog.Send(_domain, dnsname, scrport, flagid2)
 	}
 	for {
 		var isbreak bool = true
@@ -121,10 +126,9 @@ func Start(options *Options) {
 			return false
 		})
 		if isbreak {
-			stop <- "i love u,lxk"
 			break
 		}
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Millisecond * 723)
 	}
 	gologger.Printf("\n")
 	for i := 5; i >= 0; i-- {

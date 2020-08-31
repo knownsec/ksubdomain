@@ -93,6 +93,8 @@ func (d *SendDog) BuildStatusTable(domain string, dns string) (uint16, uint16) {
 	index := GenerateMapIndex(d.flagID2, d.index)
 	if _, ok := LocalStauts.Load(index); !ok {
 		LocalStauts.Store(uint32(index), StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0})
+	} else {
+		gologger.Warningf("LocalStatus 状态重复")
 	}
 	return d.flagID2, d.index
 }
@@ -155,7 +157,7 @@ func (d *SendDog) Send(domain string, dnsname string, srcport uint16, flagid uin
 		gologger.Warningf("WritePacketDate error:%s\n", err.Error())
 	}
 	atomic.AddUint64(&SentIndex, 1)
-
+	PrintStatus()
 }
 func (d *SendDog) Close() {
 	d.handle.Close()

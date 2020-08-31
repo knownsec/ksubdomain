@@ -6,7 +6,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"ksubdomain/gologger"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -24,7 +23,7 @@ func GetDevices(options *Options) EthTable {
 	defaultSelect := options.NetworkId
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
-		log.Fatal(err)
+		gologger.Fatalf("获取网络设备失败:%s\n", err.Error())
 	}
 	data := make(map[string]net.IP)
 	keys := []string{}
