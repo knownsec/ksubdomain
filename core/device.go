@@ -32,11 +32,11 @@ func GetDevices(options *Options) EthTable {
 		for _, address := range d.Addresses {
 			ip := address.IP
 			if ip.To4() != nil && !ip.IsLoopback() {
-				gologger.Printf("\n[%d] Name: %s\n", len(keys), d.Name)
-				gologger.Printf("Description: %s\n", d.Description)
-				gologger.Printf("Devices addresses: %s\n", d.Description)
-				gologger.Printf("IP address: %s\n", ip)
-				gologger.Printf("Subnet mask: %s\n", address.Netmask.String())
+				gologger.Printf("  [%d] Name: %s\n", len(keys), d.Name)
+				gologger.Printf("  Description: %s\n", d.Description)
+				gologger.Printf("  Devices addresses: %s\n", d.Description)
+				gologger.Printf("  IP address: %s\n", ip)
+				gologger.Printf("  Subnet mask: %s\n\n", address.Netmask.String())
 				data[d.Name] = ip
 				keys = append(keys, d.Name)
 			}
@@ -53,17 +53,14 @@ func GetDevices(options *Options) EthTable {
 			gologger.Fatalf("slient模式下需要指定-e参数\n")
 		}
 		gologger.Infof("选择一个可用网卡ID:")
-		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
-		if err != nil {
-			panic("There were errors reading, exiting program.")
-		}
+		input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
 		i, err2 := strconv.Atoi(strings.TrimSpace(input))
 		if err2 != nil {
-			panic("There were errors reading, exiting program.")
+			gologger.Fatalf("读入ID失败，确认输入的是数字?\n")
 		}
 
 		if i < 0 || i >= len(keys) {
-			panic("ID超出了范围")
+			gologger.Fatalf("ID超出了范围\n")
 		}
 		defaultSelect = i
 	}

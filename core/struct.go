@@ -5,12 +5,24 @@ import (
 	"sync"
 )
 
+// 本地状态表
 type StatusTable struct {
-	Domain string // 查询域名
-	Dns    string // 查询dns
-	Time   int64  // 发送时间
-	Retry  int    // 重试次数
+	Domain      string // 查询域名
+	Dns         string // 查询dns
+	Time        int64  // 发送时间
+	Retry       int    // 重试次数
+	DomainLevel int    // 域名层级
 }
+
+// 重发状态数据结构
+type RetryStruct struct {
+	Domain      string
+	Dns         string
+	SrcPort     uint16
+	FlagId      uint16
+	DomainLevel int
+}
+
 type EthTable struct {
 	SrcIp  net.IP
 	Device string

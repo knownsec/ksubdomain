@@ -66,7 +66,7 @@ func (d *SendDog) ChoseDns() string {
 	//	return dnsname
 	//}
 }
-func (d *SendDog) BuildStatusTable(domain string, dns string) (uint16, uint16) {
+func (d *SendDog) BuildStatusTable(domain string, dns string, domainlevel int) (uint16, uint16) {
 	// 生成本地状态表，返回需要的flagID和SrcPort参数
 	d.lock.Lock()
 	defer d.lock.Unlock()
@@ -92,7 +92,7 @@ func (d *SendDog) BuildStatusTable(domain string, dns string) (uint16, uint16) {
 	}
 	index := GenerateMapIndex(d.flagID2, d.index)
 	if _, ok := LocalStauts.Load(index); !ok {
-		LocalStauts.Store(uint32(index), StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0})
+		LocalStauts.Store(uint32(index), StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0, DomainLevel: domainlevel})
 	} else {
 		gologger.Warningf("LocalStatus 状态重复")
 	}

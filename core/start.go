@@ -26,7 +26,8 @@ func Start(options *Options) {
 	gologger.Infof("DNS:%s\n", options.Resolvers)
 	// 设定接收的ID
 	flagID := uint16(RandInt64(400, 654))
-	go Recv(ether.Device, options, flagID)
+	retryChan := make(chan RetryStruct, options.Rate)
+	go Recv(ether.Device, options, flagID, retryChan)
 	sendog := SendDog{}
 	sendog.Init(ether, options.Resolvers, flagID)
 
@@ -72,7 +73,7 @@ func Start(options *Options) {
 
 	limiter := ratelimit.NewLimiter(ratelimit.Every(time.Duration(time.Second.Nanoseconds()/options.Rate)), int(options.Rate))
 	ctx := context.Background()
-	// 协程重发线程
+	// 协程重发检测
 	go func() {
 		for {
 			// 循环检测超时的队列
@@ -92,15 +93,28 @@ func Start(options *Options) {
 					value.Dns = sendog.ChoseDns()
 					LocalStauts.Store(index, value)
 					flag2, srcport := GenerateFlagIndexFromMap(index)
-					sendog.Send(value.Domain, value.Dns, srcport, flag2)
+					retryChan <- RetryStruct{Domain: value.Domain, Dns: value.Dns, SrcPort: srcport, FlagId: flag2, DomainLevel: value.DomainLevel}
 				}
 				time.Sleep(time.Microsecond * time.Duration(rand.Intn(300)+100))
 				return true
 			})
 		}
 	}()
+	// 多级域名检测
+	go func() {
+		for {
+			rstruct := <-retryChan
+			if rstruct.SrcPort == 0 && rstruct.FlagId == 0 {
+				flagid2, scrport := sendog.BuildStatusTable(rstruct.Domain, rstruct.Dns, rstruct.DomainLevel)
+				rstruct.FlagId = flagid2
+				rstruct.SrcPort = scrport
+			}
+			_ = limiter.Wait(ctx)
+			sendog.Send(rstruct.Domain, rstruct.Dns, rstruct.SrcPort, rstruct.FlagId)
+		}
+	}()
+	// 循环遍历发送
 	for {
-		_ = limiter.Wait(ctx)
 		line, _, err := r.ReadLine()
 		if err != nil {
 			break
@@ -108,13 +122,13 @@ func Start(options *Options) {
 		msg := string(line)
 		if options.Verify {
 			dnsname := sendog.ChoseDns()
-			flagid2, scrport := sendog.BuildStatusTable(msg, dnsname)
+			flagid2, scrport := sendog.BuildStatusTable(msg, dnsname, 1)
 			sendog.Send(msg, dnsname, scrport, flagid2)
 		} else {
 			for _, _domain := range options.Domain {
 				_domain = msg + "." + _domain
 				dnsname := sendog.ChoseDns()
-				flagid2, scrport := sendog.BuildStatusTable(_domain, dnsname)
+				flagid2, scrport := sendog.BuildStatusTable(_domain, dnsname, 1)
 				sendog.Send(_domain, dnsname, scrport, flagid2)
 			}
 		}

@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func Recv(device string, options *Options, flagID uint16) {
+func Recv(device string, options *Options, flagID uint16, retryChan chan RetryStruct) {
 	var (
 		snapshotLen int32         = 1024
 		promiscuous bool          = false
@@ -65,11 +65,19 @@ func Recv(device string, options *Options, flagID uint16) {
 			index := GenerateMapIndex(dns.ID%100, uint16(udp.DstPort))
 			if _data, ok := LocalStauts.Load(uint32(index)); ok {
 				data := _data.(StatusTable)
-				dnsName := data.Dns
-				if dnsnum, ok2 := DnsChoice.Load(dnsName); !ok2 {
-					DnsChoice.Store(dnsName, 1)
-				} else {
-					DnsChoice.Store(dnsName, dnsnum.(int)+1)
+				//dnsName := data.Dns
+				//if dnsnum, ok2 := DnsChoice.Load(dnsName); !ok2 {
+				//	DnsChoice.Store(dnsName, 1)
+				//} else {
+				//	DnsChoice.Store(dnsName, dnsnum.(int)+1)
+				//}
+				// 处理多级域名
+				if dns.ANCount > 0 && data.DomainLevel < options.DomainLevel {
+					for _, sub := range GetSubNextData() {
+						subdomain := sub + "." + data.Domain
+						//fmt.Println(subdomain)
+						retryChan <- RetryStruct{Domain: subdomain, Dns: data.Dns, SrcPort: 0, FlagId: 0, DomainLevel: data.DomainLevel + 1}
+					}
 				}
 				if LocalStack.Len() <= 50000 {
 					LocalStack.Push(uint32(index))
