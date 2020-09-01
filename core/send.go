@@ -1,11 +1,10 @@
 package core
 
 import (
-	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
-	"log"
+	"ksubdomain/gologger"
 	"math/rand"
 	"net"
 	"sync"
@@ -37,7 +36,7 @@ func (d *SendDog) Init(ether EthTable, dns []string, flagID uint16) {
 	)
 	d.handle, err = pcap.OpenLive(d.ether.Device, snapshot_len, promiscuous, timeout)
 	if err != nil {
-		log.Fatal(err)
+		gologger.Fatalf("pcap初始化失败:%s\n", err.Error())
 	}
 	d.index = 10000
 	d.increate_index = true
@@ -67,7 +66,7 @@ func (d *SendDog) ChoseDns() string {
 	//	return dnsname
 	//}
 }
-func (d *SendDog) BuildStatusTable(domain string, dns string) (uint16, uint16) {
+func (d *SendDog) BuildStatusTable(domain string, dns string, domainlevel int) (uint16, uint16) {
 	// 生成本地状态表，返回需要的flagID和SrcPort参数
 	d.lock.Lock()
 	defer d.lock.Unlock()
@@ -93,9 +92,9 @@ func (d *SendDog) BuildStatusTable(domain string, dns string) (uint16, uint16) {
 	}
 	index := GenerateMapIndex(d.flagID2, d.index)
 	if _, ok := LocalStauts.Load(index); !ok {
-		LocalStauts.Store(uint32(index), StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0})
+		LocalStauts.Store(uint32(index), StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0, DomainLevel: domainlevel})
 	} else {
-		fmt.Println("error", index)
+		gologger.Warningf("LocalStatus 状态重复")
 	}
 	return d.flagID2, d.index
 }
@@ -151,14 +150,14 @@ func (d *SendDog) Send(domain string, dnsname string, srcport uint16, flagid uin
 		eth, ip, udp, dns,
 	)
 	if err != nil {
-		log.Fatal(err)
+		gologger.Warningf("SerializeLayers faild:%s\n", err.Error())
 	}
 	err = d.handle.WritePacketData(buf.Bytes())
 	if err != nil {
-		fmt.Println(err)
+		gologger.Warningf("WritePacketDate error:%s\n", err.Error())
 	}
 	atomic.AddUint64(&SentIndex, 1)
-
+	PrintStatus()
 }
 func (d *SendDog) Close() {
 	d.handle.Close()

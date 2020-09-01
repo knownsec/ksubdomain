@@ -3,10 +3,10 @@ package core
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"github.com/google/gopacket/pcap"
 	ratelimit "golang.org/x/time/rate"
 	"io"
+	"ksubdomain/gologger"
 	"math/rand"
 	"os"
 	"strings"
@@ -14,48 +14,82 @@ import (
 	"time"
 )
 
+func PrintStatus() {
+	gologger.Printf("\rSuccess:%d Sent:%d Recved:%d Faild:%d", SuccessIndex, SentIndex, RecvIndex, FaildIndex)
+}
 func Start(options *Options) {
 	version := pcap.Version()
-	fmt.Println(version)
-	ether := GetDevices(options.NetworkId)
+	gologger.Infof(version + "\n")
+	ether := GetDevices(options)
 	LocalStack = NewStack()
-	fmt.Println("启动接收模块,设置rate:", options.Rate, "pps")
-	fmt.Println("DNS:", options.Resolvers)
 	// 设定接收的ID
 	flagID := uint16(RandInt64(400, 654))
-	go Recv(ether.Device, options, flagID)
+	retryChan := make(chan RetryStruct, options.Rate)
+	go Recv(ether.Device, options, flagID, retryChan)
 	sendog := SendDog{}
 	sendog.Init(ether, options.Resolvers, flagID)
 
 	var f io.Reader
+	// handle Stdin
 	if options.Stdin {
-		f = os.Stdin
-	} else if options.Domain != "" {
+		if options.Verify {
+			f = os.Stdin
+		} else {
+			scanner := bufio.NewScanner(os.Stdin)
+			scanner.Split(bufio.ScanLines)
+			for scanner.Scan() {
+				options.Domain = append(options.Domain, scanner.Text())
+			}
+		}
+	}
+
+	// handle dict
+	if len(options.Domain) > 0 {
 		if options.FileName == "" {
-			fmt.Println("加载内置字典")
+			gologger.Infof("加载内置字典\n")
 			f = strings.NewReader(DefaultSubdomain)
 		} else {
 			f2, err := os.Open(options.FileName)
 			defer f2.Close()
 			if err != nil {
-				panic(err)
+				gologger.Fatalf("打开文件:%s 出现错误:%s\n", options.FileName, err.Error())
 			}
 			f = f2
 		}
-	} else if options.Verify {
+	}
+
+	if options.Verify && options.FileName != "" {
 		f2, err := os.Open(options.FileName)
 		defer f2.Close()
 		if err != nil {
-			panic(err)
+			gologger.Fatalf("打开文件:%s 出现错误:%s\n", options.FileName, err.Error())
 		}
 		f = f2
 	}
+
+	if options.SkipWildCard {
+		tmp_domains := []string{}
+		gologger.Infof("检测泛解析\n")
+		for _, domain := range options.Domain {
+			if !IsWildCard(domain) {
+				tmp_domains = append(tmp_domains, domain)
+			} else {
+				gologger.Warningf("域名:%s 存在泛解析记录,已跳过\n", domain)
+			}
+		}
+		options.Domain = tmp_domains
+	}
+	if len(options.Domain) > 0 {
+		gologger.Infof("检测域名:%s\n", options.Domain)
+	}
+	gologger.Infof("设置rate:%dpps\n", options.Rate)
+	gologger.Infof("DNS:%s\n", options.Resolvers)
+
 	r := bufio.NewReader(f)
 
 	limiter := ratelimit.NewLimiter(ratelimit.Every(time.Duration(time.Second.Nanoseconds()/options.Rate)), int(options.Rate))
 	ctx := context.Background()
-	// 协程重发线程
-	stop := make(chan string)
+	// 协程重发检测
 	go func() {
 		for {
 			// 循环检测超时的队列
@@ -75,44 +109,45 @@ func Start(options *Options) {
 					value.Dns = sendog.ChoseDns()
 					LocalStauts.Store(index, value)
 					flag2, srcport := GenerateFlagIndexFromMap(index)
-					sendog.Send(value.Domain, value.Dns, srcport, flag2)
+					retryChan <- RetryStruct{Domain: value.Domain, Dns: value.Dns, SrcPort: srcport, FlagId: flag2, DomainLevel: value.DomainLevel}
 				}
 				time.Sleep(time.Microsecond * time.Duration(rand.Intn(300)+100))
 				return true
 			})
 		}
 	}()
+	// 多级域名检测
 	go func() {
-		t := time.NewTicker(time.Millisecond * 300)
-		defer t.Stop()
 		for {
-			select {
-			case <-t.C:
-				fmt.Printf("\rSuccess:%d Sent:%d Recved:%d Faild:%d", SuccessIndex, SentIndex, RecvIndex, FaildIndex)
-			case <-stop:
-				return
+			rstruct := <-retryChan
+			if rstruct.SrcPort == 0 && rstruct.FlagId == 0 {
+				flagid2, scrport := sendog.BuildStatusTable(rstruct.Domain, rstruct.Dns, rstruct.DomainLevel)
+				rstruct.FlagId = flagid2
+				rstruct.SrcPort = scrport
 			}
+			_ = limiter.Wait(ctx)
+			sendog.Send(rstruct.Domain, rstruct.Dns, rstruct.SrcPort, rstruct.FlagId)
 		}
 	}()
+	// 循环遍历发送
 	for {
-		_ = limiter.Wait(ctx)
 		line, _, err := r.ReadLine()
 		if err != nil {
 			break
 		}
 		msg := string(line)
-		if msg == "" {
-			continue
-		}
-		var _domain string
-		if options.Verify || options.Stdin {
-			_domain = msg
+		if options.Verify {
+			dnsname := sendog.ChoseDns()
+			flagid2, scrport := sendog.BuildStatusTable(msg, dnsname, 1)
+			sendog.Send(msg, dnsname, scrport, flagid2)
 		} else {
-			_domain = msg + "." + options.Domain
+			for _, _domain := range options.Domain {
+				_domain = msg + "." + _domain
+				dnsname := sendog.ChoseDns()
+				flagid2, scrport := sendog.BuildStatusTable(_domain, dnsname, 1)
+				sendog.Send(_domain, dnsname, scrport, flagid2)
+			}
 		}
-		dnsname := sendog.ChoseDns()
-		flagid2, scrport := sendog.BuildStatusTable(_domain, dnsname)
-		sendog.Send(_domain, dnsname, scrport, flagid2)
 	}
 	for {
 		var isbreak bool = true
@@ -121,13 +156,13 @@ func Start(options *Options) {
 			return false
 		})
 		if isbreak {
-			stop <- "i love u,lxk"
 			break
 		}
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Millisecond * 723)
 	}
+	gologger.Printf("\n")
 	for i := 5; i >= 0; i-- {
-		fmt.Printf("检测完毕，等待%ds\n", i)
+		gologger.Printf("检测完毕，等待%ds\n", i)
 		time.Sleep(time.Second * 1)
 	}
 	sendog.Close()

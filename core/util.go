@@ -2,13 +2,14 @@ package core
 
 import (
 	"bufio"
+	"golang.org/x/crypto/ssh/terminal"
 	"math/rand"
 	"os"
 	"time"
 )
 
 func RandomStr(n int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 	rand.Seed(time.Now().UnixNano())
 	b := make([]rune, n)
 	for i := range b {
@@ -49,4 +50,12 @@ func FileExists(path string) bool {
 		return false
 	}
 	return true
+}
+
+func GetWindowWith() int {
+	w, _, err := terminal.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return 0
+	}
+	return w
 }

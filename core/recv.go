@@ -2,11 +2,10 @@ package core
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
-	"log"
+	"ksubdomain/gologger"
 	"os"
 	"strconv"
 	"strings"
@@ -14,16 +13,17 @@ import (
 	"time"
 )
 
-func Recv(device string, options *Options, flagID uint16) {
+func Recv(device string, options *Options, flagID uint16, retryChan chan RetryStruct) {
 	var (
 		snapshotLen int32         = 1024
 		promiscuous bool          = false
 		timeout     time.Duration = -1 * time.Second
 	)
+	windowWith := GetWindowWith()
 	handle, _ := pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	err := handle.SetBPFFilter("udp and port 53")
 	if err != nil {
-		log.Fatal(err)
+		gologger.Fatalf("SetBPFFilter Faild:%s\n", err.Error())
 	}
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	defer handle.Close()
@@ -37,7 +37,6 @@ func Recv(device string, options *Options, flagID uint16) {
 		layers.LayerTypeEthernet, &eth, &ipv4, &udp, &dns)
 	var isWrite bool = false
 	var isttl bool = options.TTL
-	var issilent bool = options.Silent
 	if options.Output != "" {
 		isWrite = true
 	}
@@ -45,7 +44,7 @@ func Recv(device string, options *Options, flagID uint16) {
 	if isWrite {
 		foutput, err = os.OpenFile(options.Output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
 		if err != nil {
-			log.Panicln(err)
+			gologger.Errorf("写入结果文件失败：%s\n", err.Error())
 		}
 	}
 	for {
@@ -67,11 +66,26 @@ func Recv(device string, options *Options, flagID uint16) {
 			index := GenerateMapIndex(dns.ID%100, uint16(udp.DstPort))
 			if _data, ok := LocalStauts.Load(uint32(index)); ok {
 				data := _data.(StatusTable)
-				dnsName := data.Dns
-				if dnsnum, ok2 := DnsChoice.Load(dnsName); !ok2 {
-					DnsChoice.Store(dnsName, 1)
-				} else {
-					DnsChoice.Store(dnsName, dnsnum.(int)+1)
+				//dnsName := data.Dns
+				//if dnsnum, ok2 := DnsChoice.Load(dnsName); !ok2 {
+				//	DnsChoice.Store(dnsName, 1)
+				//} else {
+				//	DnsChoice.Store(dnsName, dnsnum.(int)+1)
+				//}
+				// 处理多级域名
+				if dns.ANCount > 0 && data.DomainLevel < options.DomainLevel {
+					running := true
+					if options.SkipWildCard {
+						if IsWildCard(data.Domain) {
+							running = false
+						}
+					}
+					if running {
+						for _, sub := range GetSubNextData() {
+							subdomain := sub + "." + data.Domain
+							retryChan <- RetryStruct{Domain: subdomain, Dns: data.Dns, SrcPort: 0, FlagId: 0, DomainLevel: data.DomainLevel + 1}
+						}
+					}
 				}
 				if LocalStack.Len() <= 50000 {
 					LocalStack.Push(uint32(index))
@@ -92,18 +106,21 @@ func Recv(device string, options *Options, flagID uint16) {
 					msg += " => "
 				}
 				msg = strings.Trim(msg, " => ")
-				if !issilent {
-					fmt.Println("\r" + msg)
+				if windowWith > 0 {
+					gologger.Silentf("\r%s% *s\n", msg, windowWith-len(msg), "")
+				} else {
+					gologger.Silentf("\r%s\n", msg)
 				}
 				if isWrite {
 					w := bufio.NewWriter(foutput)
 					_, err = w.WriteString(msg + "\n")
 					if err != nil {
-						fmt.Println(err)
+						gologger.Errorf("写入结果文件失败.\n", err.Error())
 					}
 					w.Flush()
 				}
 			}
+			PrintStatus()
 		}
 	}
 }
