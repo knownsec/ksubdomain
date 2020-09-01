@@ -73,10 +73,17 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 				//}
 				// 处理多级域名
 				if dns.ANCount > 0 && data.DomainLevel < options.DomainLevel {
-					for _, sub := range GetSubNextData() {
-						subdomain := sub + "." + data.Domain
-						//fmt.Println(subdomain)
-						retryChan <- RetryStruct{Domain: subdomain, Dns: data.Dns, SrcPort: 0, FlagId: 0, DomainLevel: data.DomainLevel + 1}
+					running := true
+					if options.SkipWildCard {
+						if IsWildCard(data.Domain) {
+							running = false
+						}
+					}
+					if running {
+						for _, sub := range GetSubNextData() {
+							subdomain := sub + "." + data.Domain
+							retryChan <- RetryStruct{Domain: subdomain, Dns: data.Dns, SrcPort: 0, FlagId: 0, DomainLevel: data.DomainLevel + 1}
+						}
 					}
 				}
 				if LocalStack.Len() <= 50000 {

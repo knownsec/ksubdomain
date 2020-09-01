@@ -8,19 +8,20 @@ import (
 )
 
 type Options struct {
-	Rate        int64
-	Domain      []string
-	FileName    string
-	Resolvers   []string
-	Output      string
-	Test        bool
-	NetworkId   int
-	Silent      bool
-	TTL         bool
-	Verify      bool
-	Stdin       bool
-	Debug       bool
-	DomainLevel int
+	Rate         int64
+	Domain       []string
+	FileName     string
+	Resolvers    []string
+	Output       string
+	Test         bool
+	NetworkId    int
+	Silent       bool
+	TTL          bool
+	Verify       bool
+	Stdin        bool
+	Debug        bool
+	DomainLevel  int
+	SkipWildCard bool
 }
 
 // ParseOptions parses the command line flags provided by a user
@@ -39,6 +40,7 @@ func ParseOptions() *Options {
 	flag.BoolVar(&options.TTL, "ttl", false, "导出格式中包含TTL选项")
 	flag.BoolVar(&options.Verify, "verify", false, "验证模式")
 	flag.IntVar(&options.DomainLevel, "l", 1, "爆破域名层级,默认爆破一级域名")
+	flag.BoolVar(&options.SkipWildCard, "skip-wild", false, "跳过泛解析的域名")
 	flag.Parse()
 	options.Stdin = hasStdin()
 	if options.Silent {

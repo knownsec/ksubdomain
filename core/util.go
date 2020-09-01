@@ -8,7 +8,7 @@ import (
 )
 
 func RandomStr(n int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 	rand.Seed(time.Now().UnixNano())
 	b := make([]rune, n)
 	for i := range b {

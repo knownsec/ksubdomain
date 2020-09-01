@@ -22,8 +22,6 @@ func Start(options *Options) {
 	gologger.Infof(version + "\n")
 	ether := GetDevices(options)
 	LocalStack = NewStack()
-	gologger.Infof("设置rate:%dpps\n", options.Rate)
-	gologger.Infof("DNS:%s\n", options.Resolvers)
 	// 设定接收的ID
 	flagID := uint16(RandInt64(400, 654))
 	retryChan := make(chan RetryStruct, options.Rate)
@@ -54,7 +52,7 @@ func Start(options *Options) {
 			f2, err := os.Open(options.FileName)
 			defer f2.Close()
 			if err != nil {
-				gologger.Fatalf("打开文件:%s 出现错误:%s", options.FileName, err.Error())
+				gologger.Fatalf("打开文件:%s 出现错误:%s\n", options.FileName, err.Error())
 			}
 			f = f2
 		}
@@ -64,10 +62,28 @@ func Start(options *Options) {
 		f2, err := os.Open(options.FileName)
 		defer f2.Close()
 		if err != nil {
-			gologger.Fatalf("打开文件:%s 出现错误:%s", options.FileName, err.Error())
+			gologger.Fatalf("打开文件:%s 出现错误:%s\n", options.FileName, err.Error())
 		}
 		f = f2
 	}
+
+	if options.SkipWildCard {
+		tmp_domains := []string{}
+		gologger.Infof("检测泛解析\n")
+		for _, domain := range options.Domain {
+			if !IsWildCard(domain) {
+				tmp_domains = append(tmp_domains, domain)
+			} else {
+				gologger.Warningf("域名:%s 存在泛解析记录", domain)
+			}
+		}
+		options.Domain = tmp_domains
+	}
+	if len(options.Domain) > 0 {
+		gologger.Infof("检测域名:%s", options.Domain)
+	}
+	gologger.Infof("设置rate:%dpps\n", options.Rate)
+	gologger.Infof("DNS:%s\n", options.Resolvers)
 
 	r := bufio.NewReader(f)
 
