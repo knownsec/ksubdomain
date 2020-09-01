@@ -106,8 +106,9 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 					msg += " => "
 				}
 				msg = strings.Trim(msg, " => ")
-				if windowWith > 0 {
-					gologger.Silentf("\r%s% *s\n", msg, windowWith-len(msg), "")
+				ff := windowWith - len(msg) - 1
+				if windowWith > 0 && ff > 0 {
+					gologger.Silentf("\r%s% *s\n", msg, ff, "111")
 				} else {
 					gologger.Silentf("\r%s\n", msg)
 				}

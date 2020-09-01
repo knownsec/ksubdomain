@@ -89,7 +89,7 @@ func GetGateMacAddress(dvice string) [2]net.HardwareAddr {
 			timeout,
 		)
 		if err != nil {
-			panic(err)
+			gologger.Fatalf("pcap打开失败:%s\n", err.Error())
 		}
 		defer handle.Close()
 		// Use the handle as a packet source to process all packets
