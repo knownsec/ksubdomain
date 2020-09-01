@@ -19,22 +19,27 @@ ksubdomain的发送和接收是分离且不依赖系统，即使高并发发包�
 | . \   ____) | |_| | |_) | (_| | (_) | | | | | | (_| | | | | |
 |_|\_\ |_____/ \__,_|_.__/ \__,_|\___/|_| |_| |_|\__,_|_|_| |_|
 
-Current Version:  0.1
 Usage of ./ksubdomain:
   -b string
         宽带的下行速度，可以5M,5K,5G (default "1M")
   -d string
         爆破域名
+  -dl string
+        从文件中读取爆破域名
   -e int
         默认网络设备ID,默认-1，如果有多个网络设备会在命令行中选择 (default -1)
   -f string
         字典路径,-d下文件为子域名字典，-verify下文件为需要验证的域名
+  -l int
+        爆破域名层级,默认爆破一级域名 (default 1)
   -o string
         输出文件路径
   -s string
         resolvers文件路径,默认使用内置DNS
   -silent
-        使用后屏幕将只输出域名
+        使用后屏幕将不会输出结果
+  -skip-wild
+        跳过泛解析的域名
   -test
         测试本地最大发包数
   -ttl
@@ -44,23 +49,25 @@ Usage of ./ksubdomain:
 
 ```
 ### 常用命令
+```
 使用内置字典爆破
-```
 ksubdomain -d seebug.org
-```
-使用字典爆破域名
-```
-ksubdomain -d seebug.org -f subdomains.dict
-```
-字典里都是域名，可使用验证模式
-```
-ksubdomain -f dns.txt -verify
-```
-也可以从系统stdin读取
-``` 
-echo "www.seebug.org\npaper.seebug.org"|ksubdomain
-```
 
+使用字典爆破域名
+ksubdomain -d seebug.org -f subdomains.dict
+
+字典里都是域名，可使用验证模式
+ksubdomain -f dns.txt -verify
+
+爆破三级域名
+ksubdomain -d seebug.org -l 2
+
+通过管道爆破
+echo "seebug.org"|ksubdomain
+
+通过管道验证域名
+echo "paper.seebug.org"|ksubdomain -verify
+```
 [![asciicast](https://asciinema.org/a/356138.svg)](https://asciinema.org/a/356138)
 ## 编译
 因为pcap包的特殊性，无法交叉编译，只能每个系统编译每个文件。

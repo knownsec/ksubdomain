@@ -19,8 +19,8 @@ const (
 	Label
 	Misc
 	Error
-	Info
 	Warning
+	Info
 	Debug
 	Verbose
 )

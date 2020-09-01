@@ -19,6 +19,7 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 		promiscuous bool          = false
 		timeout     time.Duration = -1 * time.Second
 	)
+	windowWith := GetWindowWith()
 	handle, _ := pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	err := handle.SetBPFFilter("udp and port 53")
 	if err != nil {
@@ -105,7 +106,11 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 					msg += " => "
 				}
 				msg = strings.Trim(msg, " => ")
-				gologger.Silentf("\r%s\n", msg)
+				if windowWith > 0 {
+					gologger.Silentf("\r%s% *s\n", msg, windowWith-len(msg), "")
+				} else {
+					gologger.Silentf("\r%s\n", msg)
+				}
 				if isWrite {
 					w := bufio.NewWriter(foutput)
 					_, err = w.WriteString(msg + "\n")

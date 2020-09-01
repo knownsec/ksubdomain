@@ -74,13 +74,13 @@ func Start(options *Options) {
 			if !IsWildCard(domain) {
 				tmp_domains = append(tmp_domains, domain)
 			} else {
-				gologger.Warningf("域名:%s 存在泛解析记录", domain)
+				gologger.Warningf("域名:%s 存在泛解析记录,已跳过\n", domain)
 			}
 		}
 		options.Domain = tmp_domains
 	}
 	if len(options.Domain) > 0 {
-		gologger.Infof("检测域名:%s", options.Domain)
+		gologger.Infof("检测域名:%s\n", options.Domain)
 	}
 	gologger.Infof("设置rate:%dpps\n", options.Rate)
 	gologger.Infof("DNS:%s\n", options.Resolvers)

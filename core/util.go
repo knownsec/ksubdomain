@@ -2,6 +2,7 @@ package core
 
 import (
 	"bufio"
+	"golang.org/x/crypto/ssh/terminal"
 	"math/rand"
 	"os"
 	"time"
@@ -49,4 +50,12 @@ func FileExists(path string) bool {
 		return false
 	}
 	return true
+}
+
+func GetWindowWith() int {
+	w, _, err := terminal.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return 0
+	}
+	return w
 }

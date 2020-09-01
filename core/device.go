@@ -1,15 +1,12 @@
 package core
 
 import (
-	"bufio"
+	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"ksubdomain/gologger"
 	"net"
-	"os"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -48,15 +45,14 @@ func GetDevices(options *Options) EthTable {
 		defaultSelect = 0
 	}
 	if defaultSelect == -1 {
-		var i int
-		if options.Silent {
-			gologger.Fatalf("slient模式下需要指定-e参数\n")
+		if options.Silent || options.Stdin {
+			gologger.Fatalf("slient模式或Stdin模式下需要指定-e参数\n")
 		}
 		gologger.Infof("选择一个可用网卡ID:")
-		input, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-		i, err2 := strconv.Atoi(strings.TrimSpace(input))
+		var i int
+		_, err2 := fmt.Scanln(&i)
 		if err2 != nil {
-			gologger.Fatalf("读入ID失败，确认输入的是数字?\n")
+			gologger.Fatalf("\n读入ID失败，确认输入的是数字?\n")
 		}
 
 		if i < 0 || i >= len(keys) {
