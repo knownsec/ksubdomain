@@ -4,7 +4,7 @@ import (
 	"ksubdomain/gologger"
 )
 
-const Version = "0.2"
+const Version = "0.2.1"
 const banner = `
  _  __   _____       _         _                       _
 | |/ /  / ____|     | |       | |                     (_)
