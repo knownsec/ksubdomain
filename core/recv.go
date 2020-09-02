@@ -20,6 +20,9 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 		timeout     time.Duration = -1 * time.Second
 	)
 	windowWith := GetWindowWith()
+	if options.Silent {
+		windowWith = 0
+	}
 	handle, _ := pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
 	err := handle.SetBPFFilter("udp and port 53")
 	if err != nil {
@@ -98,12 +101,14 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 				for _, v := range dns.Questions {
 					msg += string(v.Name) + " => "
 				}
-				for _, v := range dns.Answers {
-					msg += v.String()
-					if isttl {
-						msg += " ttl:" + strconv.Itoa(int(v.TTL))
+				if !options.Silent {
+					for _, v := range dns.Answers {
+						msg += v.String()
+						if isttl {
+							msg += " ttl:" + strconv.Itoa(int(v.TTL))
+						}
+						msg += " => "
 					}
-					msg += " => "
 				}
 				msg = strings.Trim(msg, " => ")
 				ff := windowWith - len(msg) - 1
