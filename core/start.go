@@ -47,7 +47,7 @@ func Start(options *Options) {
 	if len(options.Domain) > 0 {
 		if options.FileName == "" {
 			gologger.Infof("加载内置字典\n")
-			f = strings.NewReader(DefaultSubdomain)
+			f = strings.NewReader(GetSubdomainData())
 		} else {
 			f2, err := os.Open(options.FileName)
 			defer f2.Close()
