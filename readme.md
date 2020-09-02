@@ -69,6 +69,16 @@ echo "seebug.org"|ksubdomain
 echo "paper.seebug.org"|ksubdomain -verify
 ```
 [![asciicast](https://asciinema.org/a/356138.svg)](https://asciinema.org/a/356138)
+## 管道操作
+借助知名的`subfinder`，`httpx`等工具，可以用管道结合在一起配合工作。
+```bash
+./subfinder -d baidu.com -silent|./ksubdomain -verify -silent|./httpx -title -content-length -status-code
+```
+- subfinder 通过各种搜索引擎获取域名
+- ksubdomain 验证域名
+- httpx http请求获得数据,验证存活
+![image-20200902160128305](./images/image-20200902160128305.png)
+
 ## 编译
 因为pcap包的特殊性，无法交叉编译，只能每个系统编译每个文件。
 ```bash
