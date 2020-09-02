@@ -21,9 +21,10 @@ type SendDog struct {
 	increate_index bool   // 是否使用index自增
 	flagID         uint16 // dnsid 前3位
 	flagID2        uint16 // dnsid 后2位
+	printStatus    bool
 }
 
-func (d *SendDog) Init(ether EthTable, dns []string, flagID uint16) {
+func (d *SendDog) Init(ether EthTable, dns []string, flagID uint16, printStatus bool) {
 	d.ether = ether
 	d.dns = dns
 	d.flagID = flagID
@@ -41,6 +42,7 @@ func (d *SendDog) Init(ether EthTable, dns []string, flagID uint16) {
 	d.index = 10000
 	d.increate_index = true
 	d.lock = &sync.RWMutex{}
+	d.printStatus = printStatus
 	//defer d.handle.Close()
 }
 func (d *SendDog) Lock() {
@@ -157,7 +159,9 @@ func (d *SendDog) Send(domain string, dnsname string, srcport uint16, flagid uin
 		gologger.Warningf("WritePacketDate error:%s\n", err.Error())
 	}
 	atomic.AddUint64(&SentIndex, 1)
-	PrintStatus()
+	if d.printStatus {
+		PrintStatus()
+	}
 }
 func (d *SendDog) Close() {
 	d.handle.Close()

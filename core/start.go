@@ -27,7 +27,7 @@ func Start(options *Options) {
 	retryChan := make(chan RetryStruct, options.Rate)
 	go Recv(ether.Device, options, flagID, retryChan)
 	sendog := SendDog{}
-	sendog.Init(ether, options.Resolvers, flagID)
+	sendog.Init(ether, options.Resolvers, flagID, true)
 
 	var f io.Reader
 	// handle Stdin
