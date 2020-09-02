@@ -70,7 +70,7 @@ echo "paper.seebug.org"|ksubdomain -verify
 ```
 [![asciicast](https://asciinema.org/a/356138.svg)](https://asciinema.org/a/356138)
 ## 管道操作
-借助知名的`subfinder`，`httpx`等工具，可以用管道结合在一起配合工作。
+借助知名的`subfinder`，`httpx`等工具，可以用管道结合在一起配合工作。达到收集域名，验证域名，http验证存活目的。
 ```bash
 ./subfinder -d baidu.com -silent|./ksubdomain -verify -silent|./httpx -title -content-length -status-code
 ```
