@@ -63,7 +63,7 @@ func ParseOptions() *Options {
 		options.Domain = append(options.Domain, *domain)
 	}
 	if *domain_list != "" {
-		dl, err := LinesInFile(*resolvers)
+		dl, err := LinesInFile(*domain_list)
 		if err != nil {
 			gologger.Fatalf("读取domain文件失败:%s\n", err.Error())
 		}
