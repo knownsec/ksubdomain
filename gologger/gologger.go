@@ -3,6 +3,7 @@ package gologger
 import (
 	"fmt"
 	"github.com/logrusorgru/aurora"
+	"github.com/mattn/go-colorable"
 	"os"
 	"strings"
 	"sync"
@@ -42,7 +43,8 @@ var (
 		Info:    "INFO",
 	}
 
-	mutex = &sync.Mutex{}
+	mutex  = &sync.Mutex{}
+	output = colorable.NewColorableStdout()
 )
 
 var stringBuilderPool = &sync.Pool{New: func() interface{} {
@@ -124,7 +126,7 @@ func log(level Level, label string, format string, args ...interface{}) {
 		case Silent:
 			fmt.Fprint(os.Stdout, sb.String())
 		default:
-			fmt.Fprint(os.Stderr, sb.String())
+			fmt.Fprint(output, sb.String())
 		}
 		mutex.Unlock()
 
