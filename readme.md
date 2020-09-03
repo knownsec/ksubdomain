@@ -90,3 +90,4 @@ go build ksubdomain.go
 ```
 ## 参考
 - 从 Masscan, Zmap 源码分析到开发实践 <https://paper.seebug.org/1052/>
+- ksubdomain 无状态域名爆破工具介绍 <https://paper.seebug.org/1325/>
