@@ -52,12 +52,7 @@ func (d *SendDog) UnLock() {
 	d.lock.Unlock()
 }
 func (d *SendDog) ChoseDns() string {
-	length := len(d.dns)
-	if length > 0 && length <= 1 {
-		return d.dns[0]
-	} else {
-		return d.dns[rand.Intn(len(d.dns)-1)]
-	}
+	return d.dns[rand.Intn(len(d.dns))]
 }
 func (d *SendDog) BuildStatusTable(domain string, dns string, domainlevel int) (uint16, uint16) {
 	// 生成本地状态表，返回需要的flagID和SrcPort参数
