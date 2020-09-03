@@ -53,6 +53,9 @@ func ParseOptions() *Options {
 		if err != nil {
 			gologger.Fatalf("读取resolvers文件失败:%s\n", err.Error())
 		}
+		if len(rs) == 0 {
+			gologger.Fatalf("resolvers文件内容为空\n")
+		}
 		options.Resolvers = rs
 	} else {
 		defaultDns := []string{"223.5.5.5", "223.6.6.6", "180.76.76.76", "119.29.29.29", "182.254.116.116", "114.114.114.115"}

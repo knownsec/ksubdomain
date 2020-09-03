@@ -52,21 +52,12 @@ func (d *SendDog) UnLock() {
 	d.lock.Unlock()
 }
 func (d *SendDog) ChoseDns() string {
-	return d.dns[rand.Intn(len(d.dns)-1)]
-	//if RecvIndex <= 2200 {
-	//} else {
-	//	max := 0
-	//	dnsname := ""
-	//	DnsChoice.Range(func(k, v interface{}) bool {
-	//		vv := v.(int)
-	//		if vv > max {
-	//			max = vv
-	//			dnsname = k.(string)
-	//		}
-	//		return true
-	//	})
-	//	return dnsname
-	//}
+	length := len(d.dns)
+	if length > 0 && length <= 1 {
+		return d.dns[0]
+	} else {
+		return d.dns[rand.Intn(len(d.dns)-1)]
+	}
 }
 func (d *SendDog) BuildStatusTable(domain string, dns string, domainlevel int) (uint16, uint16) {
 	// 生成本地状态表，返回需要的flagID和SrcPort参数
