@@ -40,6 +40,7 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 		layers.LayerTypeEthernet, &eth, &ipv4, &udp, &dns)
 	var isWrite bool = false
 	var isttl bool = options.TTL
+	var isSummary bool = options.Summary
 	if options.Output != "" {
 		isWrite = true
 	}
@@ -69,12 +70,6 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 			index := GenerateMapIndex(dns.ID%100, uint16(udp.DstPort))
 			if _data, ok := LocalStauts.Load(uint32(index)); ok {
 				data := _data.(StatusTable)
-				//dnsName := data.Dns
-				//if dnsnum, ok2 := DnsChoice.Load(dnsName); !ok2 {
-				//	DnsChoice.Store(dnsName, 1)
-				//} else {
-				//	DnsChoice.Store(dnsName, dnsnum.(int)+1)
-				//}
 				// 处理多级域名
 				if dns.ANCount > 0 && data.DomainLevel < options.DomainLevel {
 					running := true
@@ -97,12 +92,15 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 			}
 			if dns.ANCount > 0 {
 				atomic.AddUint64(&SuccessIndex, 1)
-				msg := ""
-				for _, v := range dns.Questions {
-					msg += string(v.Name) + " => "
+				if len(dns.Questions) == 0 {
+					continue
 				}
+				data := RecvResult{Subdomain: string(dns.Questions[0].Name)}
+				data.Answers = dns.Answers
+
+				msg := data.Subdomain + " => "
 				if !options.Silent {
-					for _, v := range dns.Answers {
+					for _, v := range data.Answers {
 						msg += v.String()
 						if isttl {
 							msg += " ttl:" + strconv.Itoa(int(v.TTL))
@@ -116,6 +114,9 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 					gologger.Silentf("\r%s% *s\n", msg, ff, "")
 				} else {
 					gologger.Silentf("\r%s\n", msg)
+				}
+				if isSummary {
+					AsnResults = append(AsnResults, data)
 				}
 				if isWrite {
 					w := bufio.NewWriter(foutput)

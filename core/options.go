@@ -22,6 +22,7 @@ type Options struct {
 	Debug        bool
 	DomainLevel  int
 	SkipWildCard bool
+	Summary      bool
 }
 
 // ParseOptions parses the command line flags provided by a user
@@ -36,11 +37,12 @@ func ParseOptions() *Options {
 	flag.StringVar(&options.Output, "o", "", "输出文件路径")
 	flag.BoolVar(&options.Test, "test", false, "测试本地最大发包数")
 	flag.IntVar(&options.NetworkId, "e", -1, "默认网络设备ID,默认-1，如果有多个网络设备会在命令行中选择")
-	flag.BoolVar(&options.Silent, "silent", false, "使用后屏幕将不会输出结果")
+	flag.BoolVar(&options.Silent, "silent", false, "使用后屏幕将仅输出域名")
 	flag.BoolVar(&options.TTL, "ttl", false, "导出格式中包含TTL选项")
 	flag.BoolVar(&options.Verify, "verify", false, "验证模式")
 	flag.IntVar(&options.DomainLevel, "l", 1, "爆破域名层级,默认爆破一级域名")
 	flag.BoolVar(&options.SkipWildCard, "skip-wild", false, "跳过泛解析的域名")
+	flag.BoolVar(&options.Summary, "summary", false, "在扫描完毕后整理域名归属asn以及IP段")
 	flag.Parse()
 	options.Stdin = hasStdin()
 	if options.Silent {
