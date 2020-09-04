@@ -33,7 +33,9 @@ func Summary() {
 			}
 		}
 	}
-	//windowWith := GetWindowWith()
+	if len(showData) == 0 {
+		gologger.Infof("未在ASN IP段上发现范围")
+	}
 	for asnKey, v := range showData {
 		gologger.Printf(aurora.Blue("ASN:").String() + " " + aurora.Yellow(strconv.Itoa(asnKey.ASN)).String() + " - " + aurora.Green(asnKey.Registry).String() + "\n")
 		countstr := fmt.Sprintf("\t%-4d", len(v))
