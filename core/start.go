@@ -166,4 +166,7 @@ func Start(options *Options) {
 		time.Sleep(time.Second * 1)
 	}
 	sendog.Close()
+	if options.Summary {
+		Summary()
+	}
 }

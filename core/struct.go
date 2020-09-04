@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/google/gopacket/layers"
 	"net"
 	"sync"
 )
@@ -23,6 +24,19 @@ type RetryStruct struct {
 	DomainLevel int
 }
 
+// 接收结果数据结构
+type RecvResult struct {
+	Subdomain string
+	Answers   []layers.DNSResourceRecord
+}
+
+// ASN数据结构
+type AsnStruct struct {
+	ASN      int
+	Registry string
+	Cidr     *net.IPNet
+}
+
 type EthTable struct {
 	SrcIp  net.IP
 	Device string
@@ -37,6 +51,7 @@ var RecvIndex uint64 = 0
 var FaildIndex uint64 = 0
 var SentIndex uint64 = 0
 var SuccessIndex uint64 = 0
+var AsnResults []RecvResult
 
 func GetWaitChain() *Stack {
 	if wait_chain == nil {
