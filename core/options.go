@@ -106,6 +106,9 @@ func ParseOptions() *Options {
 	if options.FileName != "" && !FileExists(options.FileName) {
 		gologger.Fatalf("文件:%s 不存在!\n", options.FileName)
 	}
+	if !options.Stdin && options.Verify && options.FileName == "" {
+		gologger.Fatalf("启用了 -verify 参数但传入域名为空!")
+	}
 	return options
 }
 func hasStdin() bool {
