@@ -21,7 +21,7 @@ func Start(options *Options) {
 	version := pcap.Version()
 	gologger.Infof(version + "\n")
 	var ether EthTable
-	if options.NetworkId >= 0 {
+	if options.NetworkId == -1 {
 		ether = AutoGetDevices()
 	} else {
 		ether = GetDevices(options)

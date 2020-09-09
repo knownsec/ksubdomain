@@ -96,7 +96,8 @@ func AutoGetDevices() EthTable {
 		}
 	}
 END:
-	gologger.Infof("\nUse Device: %s\n", c.Device)
+	gologger.Printf("\n")
+	gologger.Infof("Use Device: %s\n", c.Device)
 	gologger.Infof("Use IP:%s\n", c.SrcIp.String())
 	gologger.Infof("Local Mac:%s\n", c.SrcMac.String())
 	gologger.Infof("GateWay Mac:%s\n", c.DstMac.String())
