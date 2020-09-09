@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -10,11 +11,97 @@ import (
 	"time"
 )
 
-//SrcIp     string           = "10.13.20.60"
-//device    string           = "en0"
-//SrcMac    net.HardwareAddr = net.HardwareAddr{0xf0, 0x18, 0x98, 0x1a, 0x56, 0xe8}
-//DstMac    net.HardwareAddr = net.HardwareAddr{0x5c, 0xc9, 0x99, 0x33, 0x34, 0x80
-
+func AutoGetDevices() EthTable {
+	domain := RandomStr(4) + "paper.seebug.org"
+	signal := make(chan EthTable)
+	devices, err := pcap.FindAllDevs()
+	if err != nil {
+		gologger.Fatalf("获取网络设备失败:%s\n", err.Error())
+	}
+	data := make(map[string]net.IP)
+	keys := []string{}
+	for _, d := range devices {
+		for _, address := range d.Addresses {
+			ip := address.IP
+			if ip.To4() != nil && !ip.IsLoopback() {
+				data[d.Name] = ip
+				keys = append(keys, d.Name)
+			}
+		}
+	}
+	ctx := context.Background()
+	// 在初始上下文的基础上创建一个有取消功能的上下文
+	ctx, cancel := context.WithCancel(ctx)
+	for _, drviceName := range keys {
+		go func(drviceName string, domain string, signal chan EthTable, ctx context.Context) {
+			var (
+				snapshot_len int32         = 1024
+				promiscuous  bool          = false
+				timeout      time.Duration = -1 * time.Second
+				handle       *pcap.Handle
+			)
+			var err error
+			handle, err = pcap.OpenLive(
+				drviceName,
+				snapshot_len,
+				promiscuous,
+				timeout,
+			)
+			if err != nil {
+				gologger.Fatalf("pcap打开失败:%s\n", err.Error())
+			}
+			defer handle.Close()
+			// Use the handle as a packet source to process all packets
+			packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					packet, err := packetSource.NextPacket()
+					gologger.Printf(".")
+					if err != nil {
+						continue
+					}
+					if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
+						dns, _ := dnsLayer.(*layers.DNS)
+						if !dns.QR {
+							continue
+						}
+						for _, v := range dns.Questions {
+							if string(v.Name) == domain {
+								ethLayer := packet.Layer(layers.LayerTypeEthernet)
+								if ethLayer != nil {
+									eth := ethLayer.(*layers.Ethernet)
+									signal <- EthTable{SrcIp: data[drviceName], Device: drviceName, SrcMac: eth.SrcMAC, DstMac: eth.DstMAC}
+									// 网关mac 和 本地mac
+									return
+								}
+							}
+						}
+					}
+				}
+			}
+		}(drviceName, domain, signal, ctx)
+	}
+	var c EthTable
+	for {
+		select {
+		case c = <-signal:
+			cancel()
+			goto END
+		default:
+			_, _ = net.LookupHost(domain)
+			time.Sleep(time.Millisecond * 20)
+		}
+	}
+END:
+	gologger.Infof("Use Device: %s\n", c.Device)
+	gologger.Infof("Use IP:%s\n", c.SrcIp.String())
+	gologger.Infof("Local Mac:%s\n", c.SrcMac.String())
+	gologger.Infof("GateWay Mac:%s\n", c.DstMac.String())
+	return c
+}
 func GetDevices(options *Options) EthTable {
 	// Find all devices
 	defaultSelect := options.NetworkId
