@@ -20,7 +20,12 @@ func PrintStatus() {
 func Start(options *Options) {
 	version := pcap.Version()
 	gologger.Infof(version + "\n")
-	ether := GetDevices(options)
+	var ether EthTable
+	if options.NetworkId == -1 {
+		ether = AutoGetDevices()
+	} else {
+		ether = GetDevices(options)
+	}
 	LocalStack = NewStack()
 	// 设定接收的ID
 	flagID := uint16(RandInt64(400, 654))
