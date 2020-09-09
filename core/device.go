@@ -73,7 +73,7 @@ func AutoGetDevices() EthTable {
 								ethLayer := packet.Layer(layers.LayerTypeEthernet)
 								if ethLayer != nil {
 									eth := ethLayer.(*layers.Ethernet)
-									signal <- EthTable{SrcIp: data[drviceName], Device: drviceName, SrcMac: eth.SrcMAC, DstMac: eth.DstMAC}
+									signal <- EthTable{SrcIp: data[drviceName], Device: drviceName, SrcMac: eth.DstMAC, DstMac: eth.SrcMAC}
 									// 网关mac 和 本地mac
 									return
 								}
