@@ -40,9 +40,9 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 		layers.LayerTypeEthernet, &eth, &ipv4, &udp, &dns)
 	var isWrite bool = false
 	var isttl bool = options.TTL
-	var scname string = "CNAME " + options.Scname
+
+	var scname string = options.Scname
 	var isSummary bool = options.Summary
-	var drop bool = false
 	if options.Output != "" {
 		isWrite = true
 	}
@@ -67,6 +67,7 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 			continue
 		}
 		if dns.ID/100 == flagID {
+			var drop bool = false
 			atomic.AddUint64(&RecvIndex, 1)
 			udp, _ := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
 			index := GenerateMapIndex(dns.ID%100, uint16(udp.DstPort))
@@ -85,12 +86,13 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 						if isttl {
 							msg += " ttl:" + strconv.Itoa(int(v.TTL))
 						}
-						if msg == scname {
-							//  处理cname 黑名单
-							drop = true
-						}
+
 						msg += " => "
 					}
+				}
+				if strings.Contains(msg, "CNAME " + scname) && scname != ""{
+					//  处理cname 黑名单
+					drop = true
 				}
 				if !drop {
 					msg = strings.Trim(msg, " => ")
