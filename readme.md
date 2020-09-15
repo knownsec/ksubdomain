@@ -48,6 +48,8 @@ Usage of ./ksubdomain:
         导出格式中包含TTL选项
   -verify
         验证模式
+  -sc
+        泛解析忽略cname 域名 
 ```
 ### 常用命令
 ```

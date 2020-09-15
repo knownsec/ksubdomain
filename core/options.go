@@ -12,6 +12,7 @@ type Options struct {
 	Domain       []string
 	FileName     string
 	Resolvers    []string
+	Scname       string
 	Output       string
 	Test         bool
 	NetworkId    int
@@ -31,6 +32,7 @@ func ParseOptions() *Options {
 
 	bandwith := flag.String("b", "1M", "宽带的下行速度，可以5M,5K,5G")
 	domain := flag.String("d", "", "爆破域名")
+	flag.StringVar(&options.Scname, "sc", "", "泛解析cname 黑名单")
 	domain_list := flag.String("dl", "", "从文件中读取爆破域名")
 	flag.StringVar(&options.FileName, "f", "", "字典路径,-d下文件为子域名字典，-verify下文件为需要验证的域名")
 	resolvers := flag.String("s", "", "resolvers文件路径,默认使用内置DNS")
