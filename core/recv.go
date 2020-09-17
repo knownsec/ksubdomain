@@ -91,7 +91,7 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 					}
 				}
 				if options.CheckCname{
-					if strings.Contains(msg, "CNAME " + options.Scname){
+					if strings.Contains(msg, "CNAME " + scname){
 						//  处理cname 黑名单
 						drop = true
 					}
