@@ -24,7 +24,7 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 		windowWith = 0
 	}
 	handle, _ := pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
-	err := handle.SetBPFFilter("udp and port 53")
+	err := handle.SetBPFFilter("udp and src port 53")
 	if err != nil {
 		gologger.Fatalf("SetBPFFilter Faild:%s\n", err.Error())
 	}
