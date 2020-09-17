@@ -90,9 +90,11 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 						msg += " => "
 					}
 				}
-				if strings.Contains(msg, "CNAME " + scname) && scname != ""{
-					//  处理cname 黑名单
-					drop = true
+				if options.CheckCname{
+					if strings.Contains(msg, "CNAME " + options.Scname){
+						//  处理cname 黑名单
+						drop = true
+					}
 				}
 				if !drop {
 					msg = strings.Trim(msg, " => ")

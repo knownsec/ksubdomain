@@ -24,6 +24,7 @@ type Options struct {
 	DomainLevel  int
 	SkipWildCard bool
 	Summary      bool
+	CheckCname   bool
 }
 
 // ParseOptions parses the command line flags provided by a user
@@ -51,6 +52,7 @@ func ParseOptions() *Options {
 		gologger.MaxLevel = gologger.Silent
 	}
 	ShowBanner()
+	options.CheckCname = false
 	// handle resolver
 	if *resolvers != "" {
 		rs, err := LinesInFile(*resolvers)
@@ -110,6 +112,9 @@ func ParseOptions() *Options {
 	}
 	if !options.Stdin && options.Verify && options.FileName == "" {
 		gologger.Fatalf("启用了 -verify 参数但传入域名为空!")
+	}
+	if options.Scname != ""{
+		options.CheckCname = true
 	}
 	return options
 }
