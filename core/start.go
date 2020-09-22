@@ -166,11 +166,11 @@ func Start(options *Options) {
 		}
 		time.Sleep(time.Millisecond * 723)
 	}
-	gologger.Printf("\n")
-	for i := 5; i >= 0; i-- {
-		gologger.Printf("检测完毕，等待%ds\n", i)
-		time.Sleep(time.Second * 1)
-	}
+	//gologger.Printf("\n")
+	//for i := 5; i >= 0; i-- {
+	//	gologger.Printf("检测完毕，等待%ds\n", i)
+	//	time.Sleep(time.Second * 1)
+	//}
 	sendog.Close()
 	if options.Summary {
 		Summary()
