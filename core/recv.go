@@ -35,9 +35,10 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 	var dns layers.DNS
 	var eth layers.Ethernet
 	var ipv4 layers.IPv4
+	var ipv6 layers.IPv6
 
 	parser := gopacket.NewDecodingLayerParser(
-		layers.LayerTypeEthernet, &eth, &ipv4, &udp, &dns)
+		layers.LayerTypeEthernet, &eth, &ipv4, &ipv6, &udp, &dns)
 	var isWrite bool = false
 	var isttl bool = options.TTL
 	var isSummary bool = options.Summary
@@ -68,27 +69,26 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 			atomic.AddUint64(&RecvIndex, 1)
 			udp, _ := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
 			index := GenerateMapIndex(dns.ID%100, uint16(udp.DstPort))
-			if _data, ok := LocalStauts.Load(uint32(index)); ok {
-				data := _data.(StatusTable)
+			data, err := LocalStauts.SearchFromIndexAndDelete(uint32(index))
+			if err == nil {
 				// 处理多级域名
-				if dns.ANCount > 0 && data.DomainLevel < options.DomainLevel {
+				if dns.ANCount > 0 && data.v.DomainLevel < options.DomainLevel {
 					running := true
 					if options.SkipWildCard {
-						if IsWildCard(data.Domain) {
+						if IsWildCard(data.v.Domain) {
 							running = false
 						}
 					}
 					if running {
 						for _, sub := range GetSubNextData() {
-							subdomain := sub + "." + data.Domain
-							retryChan <- RetryStruct{Domain: subdomain, Dns: data.Dns, SrcPort: 0, FlagId: 0, DomainLevel: data.DomainLevel + 1}
+							subdomain := sub + "." + data.v.Domain
+							retryChan <- RetryStruct{Domain: subdomain, Dns: data.v.Dns, SrcPort: 0, FlagId: 0, DomainLevel: data.v.DomainLevel + 1}
 						}
 					}
 				}
 				if LocalStack.Len() <= 50000 {
 					LocalStack.Push(uint32(index))
 				}
-				LocalStauts.Delete(uint32(index))
 			}
 			if dns.ANCount > 0 {
 				atomic.AddUint64(&SuccessIndex, 1)

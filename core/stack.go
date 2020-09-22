@@ -9,7 +9,7 @@ type (
 	Stack struct {
 		top    *node
 		length int
-		lock   *sync.RWMutex
+		lock   sync.RWMutex
 	}
 	node struct {
 		value uint32
@@ -21,7 +21,7 @@ var LocalStack *Stack
 
 // Create a new stack
 func NewStack() *Stack {
-	return &Stack{nil, 0, &sync.RWMutex{}}
+	return &Stack{nil, 0, sync.RWMutex{}}
 }
 
 // Return the number of items in the stack

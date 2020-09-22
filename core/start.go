@@ -98,27 +98,33 @@ func Start(options *Options) {
 	go func() {
 		for {
 			// 循环检测超时的队列
-			//遍历该map，参数是个函数，该函数参的两个参数是遍历获得的key和value，返回一个bool值，当返回false时，遍历立刻结束。
-			LocalStauts.Range(func(k, v interface{}) bool {
-				index := k.(uint32)
-				value := v.(StatusTable)
-				if value.Retry >= 25 {
+			maxLength := int(options.Rate / 10)
+			datas := LocalStauts.GetTimeoutData(maxLength)
+			isdelay := true
+			if len(datas) <= 100 {
+				isdelay = false
+			}
+			for _, localdata := range datas {
+				index := localdata.index
+				value := localdata.v
+				if value.Retry >= 15 {
 					atomic.AddUint64(&FaildIndex, 1)
-					LocalStauts.Delete(index)
-					return true
+					LocalStauts.SearchFromIndexAndDelete(index)
+					continue
 				}
-				if time.Now().Unix()-value.Time >= 5 {
-					_ = limiter.Wait(ctx)
-					value.Retry++
-					value.Time = time.Now().Unix()
-					value.Dns = sendog.ChoseDns()
-					LocalStauts.Store(index, value)
-					flag2, srcport := GenerateFlagIndexFromMap(index)
-					retryChan <- RetryStruct{Domain: value.Domain, Dns: value.Dns, SrcPort: srcport, FlagId: flag2, DomainLevel: value.DomainLevel}
+				_ = limiter.Wait(ctx)
+				value.Retry++
+				value.Time = time.Now().Unix()
+				value.Dns = sendog.ChoseDns()
+				// 先删除，再重新创建
+				LocalStauts.SearchFromIndexAndDelete(index)
+				LocalStauts.Append(&value, index)
+				flag2, srcport := GenerateFlagIndexFromMap(index)
+				retryChan <- RetryStruct{Domain: value.Domain, Dns: value.Dns, SrcPort: srcport, FlagId: flag2, DomainLevel: value.DomainLevel}
+				if isdelay {
+					time.Sleep(time.Microsecond * time.Duration(rand.Intn(300)+100))
 				}
-				time.Sleep(time.Microsecond * time.Duration(rand.Intn(300)+100))
-				return true
-			})
+			}
 		}
 	}()
 	// 多级域名检测
@@ -155,12 +161,7 @@ func Start(options *Options) {
 		}
 	}
 	for {
-		var isbreak bool = true
-		LocalStauts.Range(func(k, v interface{}) bool {
-			isbreak = false
-			return false
-		})
-		if isbreak {
+		if LocalStauts.Empty() {
 			break
 		}
 		time.Sleep(time.Millisecond * 723)

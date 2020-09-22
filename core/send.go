@@ -79,11 +79,8 @@ func (d *SendDog) BuildStatusTable(domain string, dns string, domainlevel int) (
 		}
 	}
 	index := GenerateMapIndex(d.flagID2, d.index)
-	if _, ok := LocalStauts.Load(index); !ok {
-		LocalStauts.Store(uint32(index), StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0, DomainLevel: domainlevel})
-	} else {
-		gologger.Warningf("LocalStatus 状态重复")
-	}
+	s := StatusTable{Domain: domain, Dns: dns, Time: time.Now().Unix(), Retry: 0, DomainLevel: domainlevel}
+	LocalStauts.Append(&s, uint32(index))
 	return d.flagID2, d.index
 }
 

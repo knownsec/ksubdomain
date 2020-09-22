@@ -3,7 +3,6 @@ package core
 import (
 	"github.com/google/gopacket/layers"
 	"net"
-	"sync"
 )
 
 // 本地状态表
@@ -45,8 +44,7 @@ type EthTable struct {
 }
 
 var wait_chain *Stack
-var LocalStauts sync.Map
-var DnsChoice sync.Map
+var LocalStauts LocalStruct
 var RecvIndex uint64 = 0
 var FaildIndex uint64 = 0
 var SentIndex uint64 = 0
