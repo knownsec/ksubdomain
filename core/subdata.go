@@ -11,6 +11,6 @@ func GetSubdomainData() string {
 	return ret
 }
 
-func GetSubNextData() []string {
+func GetDefaultSubNextData() []string {
 	return SubNext
 }

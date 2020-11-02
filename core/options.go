@@ -8,21 +8,23 @@ import (
 )
 
 type Options struct {
-	Rate         int64
-	Domain       []string
-	FileName     string
-	Resolvers    []string
-	Output       string
-	Test         bool
-	NetworkId    int
-	Silent       bool
-	TTL          bool
-	Verify       bool
-	Stdin        bool
-	Debug        bool
-	DomainLevel  int
-	SkipWildCard bool
-	Summary      bool
+	Rate            int64
+	Domain          []string
+	FileName        string
+	Resolvers       []string
+	Output          string
+	Test            bool
+	NetworkId       int
+	Silent          bool
+	TTL             bool
+	Verify          bool
+	Stdin           bool
+	Debug           bool
+	DomainLevel     int
+	SkipWildCard    bool
+	Summary         bool
+	SubNameFileName string // 三级域名字典文件
+	FilterWildCard  bool   // 过滤泛解析结果
 }
 
 // ParseOptions parses the command line flags provided by a user
@@ -33,6 +35,7 @@ func ParseOptions() *Options {
 	domain := flag.String("d", "", "爆破域名")
 	domain_list := flag.String("dl", "", "从文件中读取爆破域名")
 	flag.StringVar(&options.FileName, "f", "", "字典路径,-d下文件为子域名字典，-verify下文件为需要验证的域名")
+	flag.StringVar(&options.SubNameFileName, "sf", "", "三级域名爆破字典文件(默认内置)")
 	resolvers := flag.String("s", "", "resolvers文件路径,默认使用内置DNS")
 	flag.StringVar(&options.Output, "o", "", "输出文件路径")
 	flag.BoolVar(&options.Test, "test", false, "测试本地最大发包数")
@@ -42,6 +45,7 @@ func ParseOptions() *Options {
 	flag.BoolVar(&options.Verify, "verify", false, "验证模式")
 	flag.IntVar(&options.DomainLevel, "l", 1, "爆破域名层级,默认爆破一级域名")
 	flag.BoolVar(&options.SkipWildCard, "skip-wild", false, "跳过泛解析的域名")
+	flag.BoolVar(&options.FilterWildCard, "filter-wild", false, "自动分析并过滤泛解析，最终输出文件，需要与'-o'搭配")
 	flag.BoolVar(&options.Summary, "summary", false, "在扫描完毕后整理域名归属asn以及IP段")
 	flag.Parse()
 	options.Stdin = hasStdin()
@@ -108,6 +112,9 @@ func ParseOptions() *Options {
 	}
 	if !options.Stdin && options.Verify && options.FileName == "" {
 		gologger.Fatalf("启用了 -verify 参数但传入域名为空!")
+	}
+	if options.FilterWildCard && options.Output == "" {
+		gologger.Fatalf("启用了 -filter-wild后，需要搭配一个输出文件 '-o'")
 	}
 	return options
 }

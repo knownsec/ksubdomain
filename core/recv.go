@@ -36,6 +36,22 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 	var eth layers.Ethernet
 	var ipv4 layers.IPv4
 	var ipv6 layers.IPv6
+	var subNextData []string
+	if options.SubNameFileName == "" {
+		subNextData = GetDefaultSubNextData()
+	} else {
+		if !FileExists(options.SubNameFileName) {
+			gologger.Fatalf("三级域名文件:%s 不存在\n", options.SubNameFileName)
+		}
+		rs, err := LinesInFile(options.SubNameFileName)
+		if err != nil {
+			gologger.Fatalf("读取三级域名文件失败:%s\n", err.Error())
+		}
+		if len(rs) == 0 {
+			gologger.Fatalf("三级域名文件内容为空\n")
+		}
+		subNextData = rs
+	}
 
 	parser := gopacket.NewDecodingLayerParser(
 		layers.LayerTypeEthernet, &eth, &ipv4, &ipv6, &udp, &dns)
@@ -80,7 +96,7 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 						}
 					}
 					if running {
-						for _, sub := range GetSubNextData() {
+						for _, sub := range subNextData {
 							subdomain := sub + "." + data.v.Domain
 							retryChan <- RetryStruct{Domain: subdomain, Dns: data.v.Dns, SrcPort: 0, FlagId: 0, DomainLevel: data.v.DomainLevel + 1}
 						}
