@@ -25,6 +25,7 @@ type Options struct {
 	Summary         bool
 	SubNameFileName string // 三级域名字典文件
 	FilterWildCard  bool   // 过滤泛解析结果
+	CheckOrigin     bool   // 会从返回包检查DNS是否为设定的，防止其他包的干扰
 }
 
 // ParseOptions parses the command line flags provided by a user
@@ -47,6 +48,7 @@ func ParseOptions() *Options {
 	flag.BoolVar(&options.SkipWildCard, "skip-wild", false, "跳过泛解析的域名")
 	flag.BoolVar(&options.FilterWildCard, "filter-wild", false, "自动分析并过滤泛解析，最终输出文件，需要与'-o'搭配")
 	flag.BoolVar(&options.Summary, "summary", false, "在扫描完毕后整理域名归属asn以及IP段")
+	flag.BoolVar(&options.CheckOrigin, "check-origin", false, "会从返回包检查DNS是否为设定的，防止其他包的干扰")
 	flag.Parse()
 	options.Stdin = hasStdin()
 	if options.Silent {

@@ -82,6 +82,11 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 			continue
 		}
 		if dns.ID/100 == flagID {
+			if options.CheckOrigin {
+				if !IsContain(options.Resolvers, ipv4.SrcIP.String()) {
+					continue
+				}
+			}
 			atomic.AddUint64(&RecvIndex, 1)
 			udp, _ := packet.Layer(layers.LayerTypeUDP).(*layers.UDP)
 			index := GenerateMapIndex(dns.ID%100, uint16(udp.DstPort))

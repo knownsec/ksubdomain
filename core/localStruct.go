@@ -8,14 +8,12 @@ import (
 
 type (
 	LocalStruct struct {
-		header *localNode
-		length int
-		lock   sync.RWMutex
+		items []localNode
+		lock  sync.RWMutex
 	}
 	localNode struct {
-		v     *StatusTable
+		v     StatusTable
 		index uint32
-		next  *localNode
 	}
 	LocalRetryStruct struct {
 		v     StatusTable
@@ -25,14 +23,14 @@ type (
 
 // Create a new stack
 func NewLocalStruct() *LocalStruct {
-	return &LocalStruct{nil, 0, sync.RWMutex{}}
+	return &LocalStruct{[]localNode{}, sync.RWMutex{}}
 }
 
 // Return the number of items in the stack
 func (this *LocalStruct) Len() int {
 	this.lock.RLock()
 	defer this.lock.RUnlock()
-	return this.length
+	return len(this.items)
 }
 
 func (this *LocalStruct) Empty() bool {
@@ -40,48 +38,23 @@ func (this *LocalStruct) Empty() bool {
 }
 
 func (this *LocalStruct) Append(node *StatusTable, index uint32) {
-	newNode := &localNode{node, index, nil}
-	if this.Empty() {
-		this.lock.Lock()
-		this.header = newNode
-		this.lock.Unlock()
-	} else {
-		this.lock.Lock()
-		current := this.header
-		for current.next != nil {
-			current = current.next
-		}
-		current.next = newNode
-		this.lock.Unlock()
-	}
 	this.lock.Lock()
-	this.length++
-	this.lock.Unlock()
+	defer this.lock.Unlock()
+	newNode := localNode{*node, index}
+	this.items = append(this.items, newNode)
 }
 
 // 搜索并删除节点
 func (this *LocalStruct) SearchFromIndexAndDelete(index uint32) (LocalRetryStruct, error) {
 	this.lock.Lock()
 	defer this.lock.Unlock()
-	prev := this.header
-	if prev == nil {
-		return LocalRetryStruct{}, errors.New("data length is null")
-	}
-	if prev.index == index {
-		v := *prev.v
-		this.header = prev.next
-		this.length--
-		return LocalRetryStruct{v, index}, nil
-	}
-	for prev.next != nil {
-		if prev.next.index == index {
-			v := *prev.next.v
-			after := prev.next.next
-			prev.next = after
-			this.length--
-			return LocalRetryStruct{v, index}, nil
+
+	for i := 0; i < len(this.items); i++ {
+		if this.items[i].index == index {
+			ret := LocalRetryStruct{this.items[i].v, index}
+			this.items = append(this.items[:i], this.items[i+1:]...)
+			return ret, nil
 		}
-		prev = prev.next
 	}
 	return LocalRetryStruct{}, errors.New("data not found")
 }
@@ -90,25 +63,23 @@ func (this *LocalStruct) SearchFromIndexAndDelete(index uint32) (LocalRetryStruc
 func (this *LocalStruct) GetTimeoutData(max int) []LocalRetryStruct {
 	this.lock.Lock()
 	defer this.lock.Unlock()
-	current := this.header
 	currentTime := time.Now().Unix()
 	index := 0
 	var tables []LocalRetryStruct
-	for current != nil {
-		if currentTime-current.v.Time < 5 {
+	j := 0
+	for i := 0; i < len(this.items); i++ {
+		if currentTime-this.items[i].v.Time < 5 {
 			break
 		}
 		if index > max {
 			break
 		}
 		index++
-		tables = append(tables, LocalRetryStruct{*current.v, current.index})
-		current = current.next
+		j = i
+		tables = append(tables, LocalRetryStruct{this.items[i].v, this.items[i].index})
 	}
-	// 删除掉这些选择的链表数据
-	if index > 0 {
-		this.header = current
-		this.length -= index
+	if len(tables) > 0 {
+		this.items = append(this.items[j+1:])
 	}
 	return tables
 }
