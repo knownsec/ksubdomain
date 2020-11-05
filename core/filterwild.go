@@ -45,6 +45,9 @@ func FilterWildCard(filename string) []string {
 			continue
 		}
 		splits := strings.SplitN(line, " => ", 2)
+		if len(splits) != 2 {
+			continue
+		}
 		ips := splits[1]
 		record_sum += 1
 		for _, ip := range strings.Split(ips, " => ") {
