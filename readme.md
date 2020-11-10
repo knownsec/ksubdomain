@@ -104,9 +104,9 @@ go build ksubdomain.go
 ```
 ## 常见问题
 - linux下 error while loading shared libraries 报错
- - https://github.com/knownsec/ksubdomain/issues/1
+  - https://github.com/knownsec/ksubdomain/issues/1
 - Python调用
- - https://github.com/knownsec/ksubdomain/issues/27
+  - https://github.com/knownsec/ksubdomain/issues/27
 ## 参考
 - 从 Masscan, Zmap 源码分析到开发实践 <https://paper.seebug.org/1052/>
 - ksubdomain 无状态域名爆破工具介绍 <https://paper.seebug.org/1325/>
