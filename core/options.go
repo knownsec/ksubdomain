@@ -104,7 +104,7 @@ func ParseOptions() *Options {
 	packSize := int64(100) // 一个DNS包大概有74byte
 	rate = rate / packSize
 	options.Rate = rate
-	if len(options.Domain) == 0 && !hasStdin() && (!options.Verify && options.FileName == "") && !options.Test {
+	if len(options.Domain) == 0 && !hasStdin() && (!options.Verify && options.FileName == "") && !options.Test && !options.ListNetwork {
 		flag.Usage()
 		os.Exit(0)
 	}

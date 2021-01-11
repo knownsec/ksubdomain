@@ -103,16 +103,12 @@ END:
 	gologger.Infof("GateWay Mac:%s\n", c.DstMac.String())
 	return c
 }
-func GetDevices(options *Options) EthTable {
-	// Find all devices
-	defaultSelect := options.NetworkId
+func GetIpv4Devices() (keys []string, data map[string]net.IP) {
 	devices, err := pcap.FindAllDevs()
+	data = make(map[string]net.IP)
 	if err != nil {
 		gologger.Fatalf("获取网络设备失败:%s\n", err.Error())
 	}
-	data := make(map[string]net.IP)
-	keys := []string{}
-
 	for _, d := range devices {
 		for _, address := range d.Addresses {
 			ip := address.IP
@@ -127,6 +123,13 @@ func GetDevices(options *Options) EthTable {
 			}
 		}
 	}
+	return
+}
+func GetDevices(options *Options) EthTable {
+	// Find all devices
+	defaultSelect := options.NetworkId
+	keys, data := GetIpv4Devices()
+
 	if len(keys) == 0 {
 		gologger.Fatalf("获取不到可用的设备名称\n")
 	} else if len(keys) == 1 {
