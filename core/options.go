@@ -13,6 +13,7 @@ type Options struct {
 	FileName        string
 	Resolvers       []string
 	Output          string
+	OutputCSV       bool
 	Test            bool
 	NetworkId       int
 	ListNetwork     bool
@@ -40,6 +41,7 @@ func ParseOptions() *Options {
 	flag.StringVar(&options.SubNameFileName, "sf", "", "三级域名爆破字典文件(默认内置)")
 	resolvers := flag.String("s", "", "resolvers文件路径,默认使用内置DNS")
 	flag.StringVar(&options.Output, "o", "", "输出文件路径")
+	flag.BoolVar(&options.OutputCSV, "csv", false, "输出excel文件")
 	flag.BoolVar(&options.Test, "test", false, "测试本地最大发包数")
 	flag.IntVar(&options.NetworkId, "e", -1, "默认网络设备ID,默认-1，如果有多个网络设备会在命令行中选择")
 	flag.BoolVar(&options.ListNetwork, "list-network", false, "列出所有网络设备")
@@ -122,6 +124,9 @@ func ParseOptions() *Options {
 	}
 	if options.FilterWildCard && options.Silent {
 		gologger.Fatalf("不支持 filter-wild 与 silent 同时使用")
+	}
+	if options.OutputCSV && options.Output == "" {
+		gologger.Fatalf("输出excel需要指定一个路径,使用参数 -o ")
 	}
 	return options
 }

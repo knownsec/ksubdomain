@@ -188,8 +188,12 @@ func Start(options *Options) {
 		}
 		_, err2 := io.WriteString(f, strings.Join(data, "\n"))
 		if err2 != nil {
-			gologger.Fatalf(err1.Error())
+			gologger.Fatalf(err2.Error())
 		}
 		gologger.Infof("文件保存成功:%s\n", options.Output)
+	}
+	if options.OutputCSV {
+		gologger.Printf("\n")
+		OutputExcel(options.Output)
 	}
 }
