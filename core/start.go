@@ -88,6 +88,44 @@ func Start(options *Options) {
 		}
 		options.Domain = tmp_domains
 	}
+	// 仅使用api
+	if options.API {
+		s := &Source{}
+		s.Init()
+		gologger.Infof("API模块:%s\n", s.Names)
+		for _, domain := range options.Domain {
+			s.Feed(domain)
+		}
+		s.Wait()
+		// 修改扫描模式为Verify
+		options.Verify = true
+		domains := make([]string, len(s.Domains))
+		i := 0
+		for k := range s.Domains {
+			domains[i] = k
+			i++
+		}
+		if options.FULL {
+			r := bufio.NewReader(f)
+			for {
+				line, _, err := r.ReadLine()
+				if err != nil {
+					break
+				}
+				msg := string(line)
+				for _, _domain := range options.Domain {
+					_domain = msg + "." + _domain
+					_, ok := s.Domains[_domain]
+					if !ok {
+						domains = append(domains, _domain)
+					}
+				}
+			}
+		}
+		f = strings.NewReader(strings.Join(domains, "\n"))
+		gologger.Infof("API模式获取完毕,验证中..\n")
+	}
+
 	if len(options.Domain) > 0 {
 		gologger.Infof("检测域名:%s\n", options.Domain)
 	}

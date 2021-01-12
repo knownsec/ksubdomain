@@ -25,6 +25,8 @@ type Options struct {
 	DomainLevel     int
 	SkipWildCard    bool
 	Summary         bool
+	API             bool
+	FULL            bool
 	SubNameFileName string // 三级域名字典文件
 	FilterWildCard  bool   // 过滤泛解析结果
 	CheckOrigin     bool   // 会从返回包检查DNS是否为设定的，防止其他包的干扰
@@ -48,6 +50,8 @@ func ParseOptions() *Options {
 	flag.BoolVar(&options.Silent, "silent", false, "使用后屏幕将仅输出域名")
 	flag.BoolVar(&options.TTL, "ttl", false, "导出格式中包含TTL选项")
 	flag.BoolVar(&options.Verify, "verify", false, "验证模式")
+	flag.BoolVar(&options.API, "api", false, "使用网络接口")
+	flag.BoolVar(&options.FULL, "full", false, "完整模式，使用网络接口和内置字典")
 	flag.IntVar(&options.DomainLevel, "l", 1, "爆破域名层级,默认爆破一级域名")
 	flag.BoolVar(&options.SkipWildCard, "skip-wild", false, "跳过泛解析的域名")
 	flag.BoolVar(&options.FilterWildCard, "filter-wild", false, "自动分析并过滤泛解析，最终输出文件，需要与'-o'搭配")
@@ -127,6 +131,9 @@ func ParseOptions() *Options {
 	}
 	if options.OutputCSV && options.Output == "" {
 		gologger.Fatalf("输出excel需要指定一个路径,使用参数 -o ")
+	}
+	if options.FULL {
+		options.API = true
 	}
 	return options
 }

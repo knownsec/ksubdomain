@@ -3,9 +3,11 @@ package core
 import (
 	"bufio"
 	"github.com/rakyll/statik/fs"
-	_ "ksubdomain/core/statik"
 	"ksubdomain/gologger"
+	_ "ksubdomain/statik"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -43,4 +45,29 @@ func GetAsnData() []AsnStruct { //[]AsnStruct
 			ASN: asnid, Registry: parts[3], Cidr: Range2CIDR(startIP, endIP)})
 	}
 	return asnData
+}
+func getDefaultScripts() []string {
+	var scripts []string
+	StatikFS, err := fs.New()
+	if err != nil {
+		gologger.Fatalf(err.Error())
+	}
+	fs.Walk(StatikFS, "/scripts", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// Is this file not a script?
+		if info.IsDir() || filepath.Ext(info.Name()) != ".lua" {
+			return nil
+		}
+		// Get the script content
+		data, err := fs.ReadFile(StatikFS, path)
+		if err != nil {
+			return err
+		}
+		scripts = append(scripts, string(data))
+		return nil
+	})
+
+	return scripts
 }

@@ -147,7 +147,7 @@ func Recv(device string, options *Options, flagID uint16, retryChan chan RetrySt
 					w := bufio.NewWriter(foutput)
 					_, err = w.WriteString(msg + "\n")
 					if err != nil {
-						gologger.Errorf("写入结果文件失败.\n", err.Error())
+						gologger.Errorf("写入结果文件失败.Err:%s\n", err.Error())
 					}
 					w.Flush()
 				}

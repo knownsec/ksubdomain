@@ -73,6 +73,12 @@ echo "seebug.org"|ksubdomain
 
 通过管道验证域名
 echo "paper.seebug.org"|ksubdomain -verify
+
+仅使用网络API接口获取域名
+ksubdomain -d seebug.org -api
+
+完整模式,先使用网络API，在此基础使用内置字典进行爆破
+ksubdomain -d seebug.org -full
 ```
 [![asciicast](https://asciinema.org/a/356138.svg)](https://asciinema.org/a/356138)
 ## Summary整理
@@ -101,6 +107,40 @@ cd ksubdomain
 go mod download
 cd cmd
 go build ksubdomain.go
+```
+
+## Script编写
+Ksubdomain 网络API引擎脚本使用`lua`，文件路径在`resources/scripts`  
+```lua 
+name = "Sublist3rAPI" -- * 插件名称(必须)
+type = "api" -- 插件类型(不必须)
+
+local json = require("json")
+
+function buildurl(domain)
+    return "https://api.sublist3r.com/search.php?domain=" .. domain
+end
+
+-- 需要实现一个vertical函数，返回类型为一个域名的table，如果失败可以返回nil
+function vertical(domain)
+    local page, err = request({url=buildurl(domain)})
+    if (err ~= nil and err ~= "") then
+        return
+    end
+    local resp = json.decode(page)
+    if (resp == nil or #resp == 0) then
+        return
+    end
+    local a = {}
+    for i, v in pairs(resp) do
+        table.insert(a, v)
+    end
+    return a
+end
+```
+在编写插件完毕后，打包文件
+```bash
+statik -src=resources
 ```
 ## 常见问题
 - linux下 error while loading shared libraries 报错
