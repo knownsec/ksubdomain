@@ -121,6 +121,7 @@ go build ksubdomain.go
 
 ## Script编写
 Ksubdomain 网络API引擎脚本使用`lua`，文件路径在`resources/scripts`  
+![WX20200904-164515](./images/WX20210112-175029.png)
 ```lua 
 name = "Sublist3rAPI" -- * 插件名称(必须)
 type = "api" -- 插件类型(不必须)
