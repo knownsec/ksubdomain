@@ -117,8 +117,12 @@ func ParseOptions() *Options {
 	if len(options.Domain) > 0 && options.Verify {
 		gologger.Fatalf("-d 与 -verify参数不可以同时出现!")
 	}
-	if options.FileName != "" && !FileExists(options.FileName) {
-		gologger.Fatalf("文件:%s 不存在!\n", options.FileName)
+	if options.FileName != "" {
+		if !FileExists(options.FileName) {
+			gologger.Fatalf("文件:%s 不存在!\n", options.FileName)
+		} else if !options.Verify || len(options.Domain) == 0 {
+			gologger.Fatalf("-f需配合-d或-verify使用!\n", )
+		}
 	}
 	if !options.Stdin && options.Verify && options.FileName == "" {
 		gologger.Fatalf("启用了 -verify 参数但传入域名为空!")

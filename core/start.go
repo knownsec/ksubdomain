@@ -182,9 +182,6 @@ func Start(options *Options) {
 			sendog.Send(rstruct.Domain, rstruct.Dns, rstruct.SrcPort, rstruct.FlagId)
 		}
 	}()
-	if f == nil {
-		return
-	}
 	// 循环遍历发送
 	for {
 		line, _, err := r.ReadLine()
