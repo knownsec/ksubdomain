@@ -9,5 +9,5 @@ function vertical(domain)
 end
 
 function buildurl(domain)
-    return "https://crt.sh/?output=json&q=" .. domain
+    return "https://crt.sh/?q=" .. domain
 end
