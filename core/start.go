@@ -167,7 +167,7 @@ func Start(options *Options) {
 					time.Sleep(time.Microsecond * time.Duration(rand.Intn(300)+100))
 				}
 			}
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 10)
 		}
 	}()
 	// 多级域名检测
