@@ -1,4 +1,4 @@
-该仓库同步于作者仓库：<https://github.com/boy-hack/ksubdomain>
+(该仓库同步于作者仓库：<https://github.com/boy-hack/ksubdomain>)
 
 ksubdomain是一款基于无状态子域名爆破工具，支持在Windows/Linux/Mac上使用，它会很快的进行DNS爆破，在Mac和Windows上理论最大发包速度在30w/s,linux上为160w/s的速度。
 ## 为什么这么快
