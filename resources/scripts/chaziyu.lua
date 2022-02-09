@@ -9,5 +9,5 @@ function vertical(domain)
 end
 
 function buildurl(domain)
-    return "https://chaziyu.com/hacking8.com/" .. domain .. "/"
+    return "https://chaziyu.com/" .. domain .. "/"
 end
