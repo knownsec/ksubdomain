@@ -52,6 +52,7 @@ func (s *Source) Scan(sc Script, domain string) {
 }
 
 func (s *Source) Feed(domain string) {
+	s.wg.Wait()
 	for _, sc := range s.script {
 		s.wg.Add(1)
 		s.limiter <- true
